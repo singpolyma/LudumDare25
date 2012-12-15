@@ -4,6 +4,7 @@ import BasicPrelude
 import Data.Lens.Common
 
 data Species = Villan | Hero | Horseman deriving (Eq, Show)
+data Plot = Intro deriving (Eq, Show)
 
 newtype WorldPosition = WorldPosition (Int, Int) deriving (Eq, Ord, Show)
 newtype ScreenPosition = ScreenPosition (Int, Int) deriving (Eq, Ord, Show)

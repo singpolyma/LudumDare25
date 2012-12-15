@@ -6,6 +6,7 @@ import Types
 import SomeMap
 import Derive
 import Data.IORef
+import Foreign (finalizeForeignPtr)
 import System.Random
 import Control.Error
 
@@ -14,6 +15,7 @@ import Data.Lens.Common
 import FRP.Elerea.Param
 import FRP.Elerea.SDL
 import qualified Graphics.UI.SDL as SDL
+import qualified Graphics.UI.SDL.TTF as SDL.TTF
 
 import qualified Data.Map as Map
 
@@ -65,9 +67,13 @@ updatePlayerAndWorld tick dice events (p, w)
 updateScreen :: Character -> Screen -> Screen
 updateScreen player = setL lensScreenPos (playerPosToScreenPos player)
 
-composeState events screen world
+updatePlot :: Character -> Maybe Plot -> Maybe Plot
+updatePlot (Character {pos = WorldPosition (_,y)}) (Just Intro) | y < 5 = Just Intro
+updatePlot _ _ = Nothing
+
+composeState events screen world plot
 	| SDL.Quit `elem` events = Nothing
-	| otherwise = Just (screen, world)
+	| otherwise = Just ((screen, world), plot)
 
 clockGen :: SignalGen Ticks (Signal Bool)
 clockGen = do
@@ -78,13 +84,14 @@ clockGen = do
 				return False
 		) =<< input
 
-signalNetwork :: World -> SignalGen Bool (Signal [SDL.Event]) -> SignalGen Ticks (Signal (Maybe (Screen, World)))
+signalNetwork :: World -> SignalGen Bool (Signal [SDL.Event]) -> SignalGen Ticks (Signal (Maybe ((Screen, World), Maybe Plot)))
 signalNetwork initialWorld eventGen = (clockGen >>=) $ flip embed $ do
 	events <- eventGen
 	dice   <- effectful $ replicateM 10 (randomRIO (1::Int, 20))
 	playerAndWorld <- transfer2 (initialPlayer, initialWorld) updatePlayerAndWorld dice events
 	screen <- transfer initialScreen (const updateScreen) (fmap fst playerAndWorld)
-	return $ composeState <$> events <*> screen <*> (fmap snd playerAndWorld)
+	plot <- transfer (Just Intro) (const updatePlot) (fmap fst playerAndWorld)
+	return $ composeState <$> events <*> screen <*> (fmap snd playerAndWorld) <*> plot
 
 screenCells :: Screen -> [WorldPosition]
 screenCells (Screen {screenPos = WorldPosition (x, y)}) =
@@ -102,8 +109,11 @@ worldPositionToScreenPosition (Screen {screenPos = WorldPosition (sx, sy)}) (Wor
 screenPositionToSDL :: ScreenPosition -> Maybe SDL.Rect
 screenPositionToSDL (ScreenPosition (x, y)) = Just $ SDL.Rect (x*32) (576 - (y*32)) 32 32
 
-draw :: SDL.Surface -> Screen -> World -> MaybeT IO ()
-draw win screen world = liftIO $ do
+plotText :: Plot -> String
+plotText Intro = "You are the evil mastermind Notlock.  Your plan to kidnap the boy king went off great, up until it was notice he was gone.  Now you are trapped in the forest on the way back to your lair, and must evade the searchers."
+
+draw :: SDL.Surface -> SDL.TTF.Font -> Screen -> World -> Maybe Plot -> MaybeT IO ()
+draw win plotFont screen world plot = liftIO $ do
 	roadColour <- mapColour win (SDL.Color 0xcc 0x00 0x00)
 	let Just (SDL.Rect {SDL.rectX = roadX}) = screenPositionToSDL $ worldPositionToScreenPosition screen (WorldPosition (10, 0))
 	True <- SDL.fillRect win (Just $ SDL.Rect roadX 0 128 600) roadColour
@@ -120,14 +130,38 @@ draw win screen world = liftIO $ do
 					True <- SDL.fillRect win (screenPositionToSDL $ worldPositionToScreenPosition screen cell) colour
 					return ()
 		) (screenCells screen)
-	SDL.flip win
 
-mainLoop :: SDL.Surface -> IO ()
-mainLoop win = void $ runMaybeT $ do
+	maybe (return ()) (drawPlot (10, 10) . plotText) plot
+	SDL.flip win
+	where
+	drawPlot _ [] = return ()
+	drawPlot (x, y) txt = do
+		-- TODO: smartwrap?
+		(w, h) <- SDL.TTF.utf8Size plotFont txt
+		let linec = (floor $ (fromIntegral (length txt) / (fromIntegral w / 800))) - 5
+		rendered <- SDL.TTF.renderUTF8Blended plotFont (take linec txt) (SDL.Color 0xff 0xff 0xff)
+		True <- SDL.blitSurface rendered Nothing win (Just $ SDL.Rect x y 0 0)
+		drawPlot (x, y+h) (drop linec txt)
+
+mainLoop :: SDL.Surface -> SDL.TTF.Font -> IO ()
+mainLoop win plotFont = void $ runMaybeT $ do
 	states <- liftIO $ (signalNetwork <$> initialWorld) >>= sdlLoop 33
-	mapM_ (maybe mzero (uncurry $ draw win)) states
+	mapM_ (maybe mzero (uncurry $ uncurry $ draw win plotFont)) states
+
+withExternalLibs :: IO () -> IO ()
+withExternalLibs f = SDL.withInit [SDL.InitEverything] $ do
+	True <- SDL.TTF.init
+
+	f
+
+	SDL.TTF.quit
+	SDL.quit
 
 main :: IO ()
-main = SDL.withInit [SDL.InitEverything] $ do
+main = withExternalLibs $ do
 	win <- SDL.setVideoMode 800 576 16 [SDL.HWSurface,SDL.HWAccel,SDL.AnyFormat,SDL.DoubleBuf]
-	mainLoop win
+	plotFont <- SDL.TTF.openFont "./PortLligatSans-Regular.ttf" 20
+	mainLoop win plotFont
+
+	-- Need to do this so that SDL.TTF.quit will not segfault
+	finalizeForeignPtr plotFont
