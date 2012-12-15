@@ -14,12 +14,6 @@ report.html: Main.hs SomeMap.hs Types.hs
 
 doc: dist/doc/html/LudumDare25/index.html README
 
-README: LudumDare25.cabal
-	tail -n+$$(( `grep -n ^description: $^ | head -n1 | cut -d: -f1` + 1 )) $^ > .$@
-	head -n+$$(( `grep -n ^$$ .$@ | head -n1 | cut -d: -f1` - 1 )) .$@ > $@
-	-printf ',s/        //g\n,s/^.$$//g\nw\nq\n' | ed $@
-	$(RM) .$@
-
 dist/doc/html/LudumDare25/index.html: dist/setup-config Main.hs SomeMap.hs Types.hs
 	-cabal haddock --hyperlink-source --executables
 
