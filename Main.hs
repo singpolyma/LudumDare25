@@ -83,7 +83,7 @@ isKeyUp _ = False
 
 updatePlayerAndWorld :: Bool -> [Int] -> [SDL.Event] -> Either Species (Character, World) -> Either Species (Character, World)
 updatePlayerAndWorld tick dice events (Right (p, w))
-	| tick || not (null $ filter isKeyUp events) = updated >>= (\(p', w') ->
+	| tick || any isKeyUp events = updated >>= (\(p', w') ->
 		let
 			characters = mapMaybe fromCharacterCell (Map.elems w')
 			heroes = filter ((==Hero) . species) characters
