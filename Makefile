@@ -31,7 +31,7 @@ clean:
 	$(RM) -r dist dist-ghc Derive.hs
 
 Derive.hs: Types.hs
-	derive -d Lens -iTypes -iData.Lens.Common -m Derive Types.hs > Derive.hs
+	derive -d Lens -iTypes -iData.Lens.Common -i"qualified Graphics.UI.SDL as SDL" -m Derive Types.hs > Derive.hs
 
 dist/build/LudumDare25/LudumDare25: LudumDare25.cabal dist/setup-config Main.hs Derive.hs Types.hs SomeMap.hs
 	cabal build --ghc-options="$(GHCFLAGS)"

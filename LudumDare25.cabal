@@ -26,7 +26,8 @@ executable LudumDare25
         other-modules:
                 Types,
                 SomeMap,
-                Derive
+                Derive,
+                SDLgfx
 
         build-depends:
                 base == 4.*,
@@ -35,12 +36,16 @@ executable LudumDare25
                 elerea,
                 elerea-sdl,
                 SDL,
+                SDL-image,
                 SDL-ttf,
                 data-lens,
                 basic-prelude,
                 random,
                 utility-ht,
                 text
+
+        extra-libraries:
+                SDL_gfx
 
 source-repository head
         type:     git

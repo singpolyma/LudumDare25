@@ -2,6 +2,7 @@ module Types where
 
 import BasicPrelude
 import Data.Lens.Common
+import qualified Graphics.UI.SDL as SDL
 
 data Species = Villan | Hero | Horseman | Goat deriving (Eq, Show)
 data Plot = Intro | HeroRumour deriving (Eq, Show)
@@ -27,6 +28,11 @@ data Character = Character {
 		species :: Species,
 		sight   :: Distance,
 		pos     :: WorldPosition
+	} deriving (Eq, Show)
+
+data Images = Images {
+		bg :: SDL.Surface,
+		road :: SDL.Surface
 	} deriving (Eq, Show)
 
 worldPositionX :: Lens WorldPosition Int
