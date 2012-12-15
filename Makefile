@@ -9,12 +9,12 @@ all: report.html doc dist/build/LudumDare25/LudumDare25 dist/LudumDare25-$(VERSI
 install: dist/build/LudumDare25/LudumDare25
 	cabal install
 
-report.html: Main.hs SomeMap.hs Types.hs
-	-hlint $(HLINTFLAGS) --report Main.hs SomeMap.hs Types.hs
+report.html: Main.hs SomeMap.hs Types.hs SDLgfx.hs Util.hs
+	-hlint $(HLINTFLAGS) --report Main.hs SomeMap.hs Types.hs SDLgfx.hs Util.hs
 
 doc: dist/doc/html/LudumDare25/index.html README
 
-dist/doc/html/LudumDare25/index.html: dist/setup-config Main.hs SomeMap.hs Types.hs
+dist/doc/html/LudumDare25/index.html: dist/setup-config Main.hs SomeMap.hs Types.hs SDLgfx.hs Util.hs
 	-cabal haddock --hyperlink-source --executables
 
 dist/setup-config: LudumDare25.cabal
@@ -27,9 +27,9 @@ clean:
 Derive.hs: Types.hs
 	derive -d Lens -iTypes -iData.Lens.Common -i"qualified Graphics.UI.SDL as SDL" -m Derive Types.hs > Derive.hs
 
-dist/build/LudumDare25/LudumDare25: LudumDare25.cabal dist/setup-config Main.hs Derive.hs Types.hs SomeMap.hs
+dist/build/LudumDare25/LudumDare25: LudumDare25.cabal dist/setup-config Main.hs Derive.hs Types.hs SomeMap.hs SDLgfx.hs Util.hs
 	cabal build --ghc-options="$(GHCFLAGS)"
 
-dist/LudumDare25-$(VERSION).tar.gz: LudumDare25.cabal dist/setup-config README Main.hs Derive.hs Types.hs SomeMap.hs
+dist/LudumDare25-$(VERSION).tar.gz: LudumDare25.cabal dist/setup-config README Main.hs Derive.hs Types.hs SomeMap.hs SDLgfx.hs Util.hs
 	cabal check
 	cabal sdist

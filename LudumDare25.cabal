@@ -27,7 +27,8 @@ executable LudumDare25
                 Types,
                 SomeMap,
                 Derive,
-                SDLgfx
+                SDLgfx,
+                Util
 
         build-depends:
                 base == 4.*,

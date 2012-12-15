@@ -2,9 +2,6 @@ module Main where
 
 import Prelude ()
 import BasicPrelude
-import Types
-import SomeMap
-import Derive
 import Control.Concurrent (threadDelay)
 import Data.IORef
 import Foreign (finalizeForeignPtr, touchForeignPtr)
@@ -24,6 +21,16 @@ import qualified Graphics.UI.SDL.Mixer as SDL.Mixer
 
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+
+import Types
+import SomeMap
+import Util
+import Derive
+
+initialScreen :: Screen
+initialScreen = Screen {
+		screenPos = playerPosToScreenPos initialPlayer
+	}
 
 moveCharacter :: Character -> WorldPosition -> World -> Either Species (Character, World)
 moveCharacter player newPos world =
@@ -67,27 +74,11 @@ moveToward pos@(WorldPosition (x1, y1)) (WorldPosition (x2, y2)) =
 		(y1 < y2, WorldPosition (x1, y1+2))
 	]
 
-colourForSpecies :: Species -> SDL.Color
-colourForSpecies Villan = SDL.Color 0xcc 0xcc 0xcc
-colourForSpecies Hero = SDL.Color 0x00 0x00 0xcc
-colourForSpecies Horseman = SDL.Color 0x00 0xcc 0x00
-colourForSpecies Goat = SDL.Color 0x99 0x99 0x00
-
-spriteForSpecies :: Species -> Images -> SDL.Surface
-spriteForSpecies Villan = notlock
-spriteForSpecies Horseman = horse
-spriteForSpecies Goat = goat
-spriteForSpecies Hero = hero
-
 canSee :: Character -> Character -> Bool
 canSee (Character {sight = s, pos = WorldPosition (x1, y1)}) (Character {pos = WorldPosition (x2, y2)}) =
 	dist <= s
 	where
 	dist = Distance $ floor (sqrt $ fromIntegral ((x1-x2)^(2::Int) + (y1-y2)^(2::Int)) :: Double)
-
-isKeyUp :: SDL.Event -> Bool
-isKeyUp (SDL.KeyUp {}) = True
-isKeyUp _ = False
 
 updatePlayerAndWorld :: Bool -> [Int] -> [SDL.Event] -> Either Species (Character, World) -> Either Species (Character, World)
 updatePlayerAndWorld tick dice events (Right (p, w))
@@ -158,22 +149,6 @@ signalNetwork initialWorld eventGen = (clockGen >>=) $ flip embed $ do
 	plot <- transfer (Just Intro) (const updatePlot) (fmap (hush . fmap fst) playerAndWorld)
 	return $ composeState <$> events <*> screen <*> fmap (fmap snd) playerAndWorld <*> plot
 
-screenCells :: Screen -> [WorldPosition]
-screenCells (Screen {screenPos = WorldPosition (x, y)}) =
-	concatMap (\xoff ->
-		map (\yoff -> WorldPosition (x+xoff, y+yoff)) [0..18]
-	) [0..25]
-
-mapColour :: SDL.Surface -> SDL.Color -> IO SDL.Pixel
-mapColour win (SDL.Color r g b) = SDL.mapRGB (SDL.surfaceGetPixelFormat win) r g b
-
-worldPositionToScreenPosition :: Screen -> WorldPosition -> ScreenPosition
-worldPositionToScreenPosition (Screen {screenPos = WorldPosition (sx, sy)}) (WorldPosition (x, y)) =
-	ScreenPosition (x - sx, y - sy)
-
-screenPositionToSDL :: ScreenPosition -> Maybe SDL.Rect
-screenPositionToSDL (ScreenPosition (x, y)) = Just $ SDL.Rect (x*32) (576 - (y*32)) 32 32
-
 plotText :: Plot -> String
 plotText Intro = "You are the evil mastermind Notlock.  Your plan to kidnap the boy king went off great, up until it was noticed that he was gone.  Now you are trapped in the forest on the way back to your lair, and must evade the searchers."
 plotText HeroRumour = "You have heard that there is a HERO abount.  Best be careful."
@@ -217,21 +192,6 @@ draw win plotFont images@(Images {bg=bg, road=road}) screen world plot = liftIO 
 	where
 	inLamp pos = let ScreenPosition (x,y) = worldPositionToScreenPosition screen pos in
 		x >= 7 && x <= 17 && y >= 4 && y <= 14
-
-drawWrap :: SDL.Surface -> SDL.TTF.Font -> (Int, Int) -> String -> IO ()
-drawWrap win plotFont = go
-	where
-	go _ [] = return ()
-	go (x, y) txt = do
-		(w, h) <- SDL.TTF.utf8Size plotFont txt
-		let linec = floor (fromIntegral (length txt) / (fromIntegral w / 800::Rational))
-		let smartWrappedLine = smartWrap linec txt
-		rendered <- SDL.TTF.renderUTF8Blended plotFont smartWrappedLine (SDL.Color 0xff 0xff 0xff)
-		True <- SDL.blitSurface rendered Nothing win (Just $ SDL.Rect x y 0 0)
-		go (x, y+h) (drop (length smartWrappedLine) txt)
-	smartWrap c s
-		| length s < c = s
-		| otherwise =  init $ dropWhileEnd (/=' ') $ take c s
 
 mainLoop :: SDL.Surface -> SDL.TTF.Font -> Images -> IO ()
 mainLoop win plotFont images = eitherT handleDone (error "impossible") $ do

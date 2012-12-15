@@ -1,10 +1,12 @@
-module SomeMap (someMap, playerPosToScreenPos, insertCharacterToWorld, initialWorld, initialScreen, initialPlayer) where
+module SomeMap (initialWorld, initialPlayer) where
 
 import Prelude ()
 import BasicPrelude
-import Types hiding (goat, hero)
 import System.Random (randomRIO)
 import qualified Data.Map as Map
+
+import Types hiding (goat, hero)
+import Util
 
 hero :: Character
 hero = Character {
@@ -54,14 +56,3 @@ initialPlayer = Character {
 
 initialWorld :: IO World
 initialWorld = insertCharacterToWorld initialPlayer <$> someMap
-
-initialScreen :: Screen
-initialScreen = Screen {
-		screenPos = playerPosToScreenPos initialPlayer
-	}
-
-playerPosToScreenPos :: Character -> WorldPosition
-playerPosToScreenPos (Character {pos = WorldPosition (x, y)}) = WorldPosition (x - 12, y - 9)
-
-insertCharacterToWorld :: Character -> World -> World
-insertCharacterToWorld c = Map.insert (pos c) (C c)
