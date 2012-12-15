@@ -66,7 +66,7 @@ canSee :: Character -> Character -> Bool
 canSee (Character {sight = s, pos = WorldPosition (x1, y1)}) (Character {pos = WorldPosition (x2, y2)}) =
 	dist <= s
 	where
-	dist = Distance $ floor $ sqrt $ fromIntegral ((x1-x2)^2 + (y1-y2)^2)
+	dist = Distance $ floor (sqrt $ fromIntegral ((x1-x2)^(2::Int) + (y1-y2)^(2::Int)) :: Double)
 
 updatePlayerAndWorld :: Bool -> [Int] -> [SDL.Event] -> (Character, World) -> (Character, World)
 updatePlayerAndWorld tick dice events (p, w)
