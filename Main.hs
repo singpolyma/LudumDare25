@@ -38,6 +38,8 @@ moveCharacter player newPos world =
 		Nothing -> Right (movedPlayer, Map.delete (pos player) $ insertCharacterToWorld movedPlayer world)
 		Just (C (Character {species = Villan})) -> Left $ species player
 		Just (C x) | species player == Villan -> Left $ species x
+		Just _ | species player == Hero -> -- Hero can walk through anything
+			Right (movedPlayer, Map.delete (pos player) $ insertCharacterToWorld movedPlayer world)
 		_ -> Right (player, world)
 	where
 	movedPlayer = setL lensPos newPos player
