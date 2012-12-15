@@ -116,16 +116,16 @@ plotText Intro = "You are the evil mastermind Notlock.  Your plan to kidnap the 
 draw :: SDL.Surface -> SDL.TTF.Font -> Screen -> World -> Maybe Plot -> MaybeT IO ()
 draw win plotFont screen world plot = liftIO $ do
 	roadColour <- mapColour win (SDL.Color 0xcc 0x00 0x00)
-	let Just (SDL.Rect {SDL.rectX = roadX}) = screenPositionToSDL $ worldPositionToScreenPosition screen (WorldPosition (10, 0))
-	True <- SDL.fillRect win (Just $ SDL.Rect roadX 0 128 600) roadColour
+	lampColour <- mapColour win (SDL.Color 0xcc 0xcc 0x00)
 	mapM_ (\cell ->
 			case Map.lookup cell world of
-				Just (C c) -> do
+				Just (C c) | inLamp cell -> do
 					colour <- mapColour win $ colourForSpecies (species c)
 					True <- SDL.fillRect win (screenPositionToSDL $ worldPositionToScreenPosition screen (pos c)) colour
 					return ()
 				_ -> do
 					colour <- case cell of
+						_ | inLamp cell -> return lampColour
 						WorldPosition (x, _) | x >= 10 && x <= 13 -> return roadColour
 						_ -> mapColour win $ SDL.Color 0x00 0x00 0x00
 					True <- SDL.fillRect win (screenPositionToSDL $ worldPositionToScreenPosition screen cell) colour
@@ -135,6 +135,8 @@ draw win plotFont screen world plot = liftIO $ do
 	maybe (return ()) (drawPlot (10, 10) . plotText) plot
 	SDL.flip win
 	where
+	inLamp pos = let ScreenPosition (x,y) = worldPositionToScreenPosition screen pos in
+		x >= 7 && x <= 17 && y >= 4 && y <= 14
 	drawPlot _ [] = return ()
 	drawPlot (x, y) txt = do
 		-- TODO: smartwrap?

@@ -9,7 +9,7 @@ import qualified Data.Map as Map
 hero :: Character
 hero = Character {
 		species = Hero,
-		sight   = Distance 5,
+		sight   = Distance 4,
 		pos     = WorldPosition (20, 15)
 	}
 
@@ -35,7 +35,7 @@ someMap = fmap (mkWorld . (hero:)) (replicateM 10 horsemanIO)
 initialPlayer :: Character
 initialPlayer = Character {
 		species = Villan,
-		sight   = Distance 10,
+		sight   = Distance 5,
 		pos     = WorldPosition (12, 0)
 	}
 
