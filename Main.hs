@@ -42,10 +42,16 @@ updateWorld (Right (player@(Character {pos = p}), world)) (SDL.KeyUp (SDL.Keysym
 	moveCharacter player (worldPositionX ^-= 1 $ p) world
 updateWorld p _ = p
 
-moveFromDie :: Int -> WorldPosition -> WorldPosition
-moveFromDie die (WorldPosition (x, y))
+moveHorseFromDie :: Int -> WorldPosition -> WorldPosition
+moveHorseFromDie die (WorldPosition (x, y))
 	| die < 10  = WorldPosition (x, y+1)
 	| die < 20  = WorldPosition (x, y-1)
+	| otherwise = WorldPosition (x, y)
+
+moveGoatFromDie :: Int -> WorldPosition -> WorldPosition
+moveGoatFromDie die (WorldPosition (x, y))
+	| die < 10  = WorldPosition (x+2, y)
+	| die < 20  = WorldPosition (x-2, y)
 	| otherwise = WorldPosition (x, y)
 
 moveToward :: WorldPosition -> WorldPosition -> WorldPosition
@@ -61,6 +67,7 @@ colourForSpecies :: Species -> SDL.Color
 colourForSpecies Villan = SDL.Color 0xcc 0xcc 0xcc
 colourForSpecies Hero = SDL.Color 0x00 0x00 0xcc
 colourForSpecies Horseman = SDL.Color 0x00 0xcc 0x00
+colourForSpecies Goat = SDL.Color 0x99 0x99 0x00
 
 canSee :: Character -> Character -> Bool
 canSee (Character {sight = s, pos = WorldPosition (x1, y1)}) (Character {pos = WorldPosition (x2, y2)}) =
@@ -75,6 +82,7 @@ updatePlayerAndWorld tick dice events (Right (p, w))
 			characters = mapMaybe fromCharacterCell (Map.elems w')
 			heroes = filter ((==Hero) . species) characters
 			horsemen = filter ((==Horseman) . species) characters
+			goats = filter ((==Goat) . species) characters
 		in
 		fmap ((,) p') $
 		updateWorldFor heroes (\world (_, hero) ->
@@ -83,11 +91,17 @@ updatePlayerAndWorld tick dice events (Right (p, w))
 			else
 				return world
 		) =<<
+		updateWorldFor goats (\world (idx, goat) ->
+			if goat `canSee` p' then
+				fmap snd $ moveCharacter goat (moveToward (pos goat) (pos p')) world
+			else
+				fmap snd $ moveCharacter goat (moveGoatFromDie (selectDie idx) (pos goat)) world
+		) =<<
 		updateWorldFor horsemen (\world (idx, horseman) ->
 			if horseman `canSee` p' then
 				fmap snd $ moveCharacter horseman (moveToward (pos horseman) (pos p')) world
 			else
-				fmap snd $ moveCharacter horseman (moveFromDie (selectDie idx) (pos horseman)) world
+				fmap snd $ moveCharacter horseman (moveHorseFromDie (selectDie idx) (pos horseman)) world
 		) w')
 	| otherwise = updated
 	where

@@ -3,7 +3,7 @@ module Types where
 import BasicPrelude
 import Data.Lens.Common
 
-data Species = Villan | Hero | Horseman deriving (Eq, Show)
+data Species = Villan | Hero | Horseman | Goat deriving (Eq, Show)
 data Plot = Intro | HeroRumour deriving (Eq, Show)
 
 newtype WorldPosition = WorldPosition (Int, Int) deriving (Eq, Ord, Show)

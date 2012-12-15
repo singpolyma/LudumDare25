@@ -13,6 +13,19 @@ hero = Character {
 		pos     = WorldPosition (14, 100)
 	}
 
+goat :: WorldPosition -> Character
+goat p = Character {
+		species = Goat,
+		sight   = Distance 4,
+		pos     = p
+	}
+
+goatIO :: IO Character
+goatIO = do
+	x <- randomRIO ( -50, 50)
+	y <- randomRIO ( 5,100)
+	return $ goat $ WorldPosition (x, y)
+
 horseman :: WorldPosition -> Character
 horseman p = Character {
 		species = Horseman,
@@ -23,14 +36,14 @@ horseman p = Character {
 horsemanIO :: IO Character
 horsemanIO = do
 	x <- randomRIO (10, 13)
-	y <- randomRIO ( 5,180)
+	y <- randomRIO ( 5,100)
 	return $ horseman $ WorldPosition (x, y)
 
 mkWorld :: [Character] -> World
 mkWorld = Map.fromList . map (pos &&& C)
 
 someMap :: IO World
-someMap = fmap (mkWorld . (hero:)) (replicateM 10 horsemanIO)
+someMap = (mkWorld . (hero:)) <$> ((++) <$> replicateM 10 horsemanIO <*> replicateM 50 goatIO)
 
 initialPlayer :: Character
 initialPlayer = Character {
