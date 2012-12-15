@@ -19,11 +19,13 @@ colourForSpecies Villan = SDL.Color 0xcc 0xcc 0xcc
 colourForSpecies Hero = SDL.Color 0x00 0x00 0xcc
 colourForSpecies Horseman = SDL.Color 0x00 0xcc 0x00
 colourForSpecies Goat = SDL.Color 0x99 0x99 0x00
+colourForSpecies Guard = SDL.Color 0x00 0x99 0x99
 
 spriteForSpecies :: Species -> Images -> SDL.Surface
 spriteForSpecies Villan = notlock
 spriteForSpecies Horseman = horse
 spriteForSpecies Goat = goat
+spriteForSpecies Guard = goat
 spriteForSpecies Hero = hero
 
 isKeyUp :: SDL.Event -> Bool

@@ -1,7 +1,7 @@
 module SomeMap (initialWorld, initialPlayer) where
 
 import Prelude ()
-import BasicPrelude
+import BasicPrelude hiding (guard)
 import System.Random (randomRIO)
 import qualified Data.Map as Map
 
@@ -44,8 +44,26 @@ horsemanIO = do
 mkWorld :: [Character] -> World
 mkWorld = Map.fromList . map (pos &&& C)
 
+guard :: WorldPosition -> Character
+guard p = Character {
+		species = Guard,
+		sight   = Distance 1,
+		pos     = p
+	}
+
+guards :: [Character]
+guards = concatMap (\x -> [
+		guard (WorldPosition (x, -20)),
+		guard (WorldPosition (x, 120))
+	]) [-50..50]
+	++
+	concatMap (\y -> [
+		guard (WorldPosition (-50, y)),
+		guard (WorldPosition (50, y))
+	]) [-20..120]
+
 someMap :: IO World
-someMap = (mkWorld . (hero:)) <$> ((++) <$> replicateM 10 horsemanIO <*> replicateM 40 goatIO)
+someMap = (mkWorld . ((hero:guards) ++)) <$> ((++) <$> replicateM 10 horsemanIO <*> replicateM 40 goatIO)
 
 initialPlayer :: Character
 initialPlayer = Character {

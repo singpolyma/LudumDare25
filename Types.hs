@@ -6,7 +6,7 @@ import qualified Graphics.UI.SDL as SDL
 
 data Done = Quit | Died Species
 
-data Species = Villan | Hero | Horseman | Goat deriving (Eq, Show)
+data Species = Villan | Hero | Horseman | Goat | Guard deriving (Eq, Show)
 data Plot = Intro | HeroRumour | Patrols deriving (Eq, Show)
 
 newtype WorldPosition = WorldPosition (Int, Int) deriving (Eq, Ord, Show)

@@ -85,12 +85,12 @@ updatePlayerAndWorld tick dice events (Right (p, w))
 	| tick || any isKeyUp events = updated >>= (\(p', w') ->
 		let
 			characters = mapMaybe fromCharacterCell (Map.elems w')
-			heroes = filter ((==Hero) . species) characters
+			followOnly = filter ((`elem`[Hero,Guard]) . species) characters
 			horsemen = filter ((==Horseman) . species) characters
 			goats = filter ((==Goat) . species) characters
 		in
 		fmap ((,) p') $
-		updateWorldFor heroes (\world (_, hero) ->
+		updateWorldFor followOnly (\world (_, hero) ->
 			if hero `canSee` p' then
 				fmap snd $ moveCharacter hero (moveToward (pos hero) (pos p')) world
 			else
@@ -223,8 +223,7 @@ mainLoop win plotFont images musicState = eitherT handleDone (error "impossible"
 	pause = do
 		e <- SDL.waitEventBlocking
 		case e of
-			SDL.KeyDown _ -> SDL.Mixer.pausedMusic >>=
-				(\paused -> mainLoop win plotFont images (not paused))
+			SDL.KeyDown _ -> SDL.Mixer.pausedMusic >>= mainLoop win plotFont images . not
 			SDL.Quit -> return ()
 			_ -> pause
 
