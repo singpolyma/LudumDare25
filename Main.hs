@@ -70,15 +70,24 @@ canSee (Character {sight = s, pos = WorldPosition (x1, y1)}) (Character {pos = W
 
 updatePlayerAndWorld :: Bool -> [Int] -> [SDL.Event] -> (Character, World) -> (Character, World)
 updatePlayerAndWorld tick dice events (p, w)
-	| tick = (p', foldl' (\world (idx, horseman) ->
+	| tick = (p',
+		updateWorldFor heroes (\world (_, hero) ->
+			if hero `canSee` p' then
+				snd $ movePlayer hero (moveToward (pos hero) (pos p')) world
+			else
+				world
+		) $
+		updateWorldFor horsemen (\world (idx, horseman) ->
 			if horseman `canSee` p' then
 				snd $ movePlayer horseman (moveToward (pos horseman) (pos p')) world
 			else
 				snd $ movePlayer horseman (moveFromDie (selectDie idx) (pos horseman)) world
-		) w' (zip [0..] horsemen))
+		) w')
 	| otherwise = (p', w')
 	where
+	updateWorldFor doodz f world = foldl' f world (zip [(0::Int)..] doodz)
 	selectDie idx = dice !! (idx `mod` length dice) -- TODO: this is slow
+	heroes = filter ((==Hero) . species) characters
 	horsemen = filter ((==Horseman) . species) characters
 	characters = mapMaybe fromCharacterCell (Map.elems w')
 	(p', w') = foldl' updateWorld (p, w) events
@@ -88,6 +97,7 @@ updateScreen player = setL lensScreenPos (playerPosToScreenPos player)
 
 updatePlot :: Character -> Maybe Plot -> Maybe Plot
 updatePlot (Character {pos = WorldPosition (_,y)}) (Just Intro) | y < 5 = Just Intro
+updatePlot (Character {pos = WorldPosition (_,y)}) _ | y > 5 && y < 10 = Just HeroRumour
 updatePlot _ _ = Nothing
 
 composeState :: [SDL.Event] -> t1 -> t2 -> t -> Maybe ((t1, t2), t)
@@ -131,6 +141,7 @@ screenPositionToSDL (ScreenPosition (x, y)) = Just $ SDL.Rect (x*32) (576 - (y*3
 
 plotText :: Plot -> String
 plotText Intro = "You are the evil mastermind Notlock.  Your plan to kidnap the boy king went off great, up until it was notice he was gone.  Now you are trapped in the forest on the way back to your lair, and must evade the searchers."
+plotText HeroRumour = "You have heard that there is a HERO abount.  Best be careful."
 
 draw :: SDL.Surface -> SDL.TTF.Font -> Screen -> World -> Maybe Plot -> MaybeT IO ()
 draw win plotFont screen world plot = liftIO $ do

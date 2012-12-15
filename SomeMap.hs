@@ -9,8 +9,8 @@ import qualified Data.Map as Map
 hero :: Character
 hero = Character {
 		species = Hero,
-		sight   = Distance 4,
-		pos     = WorldPosition (20, 15)
+		sight   = Distance 10,
+		pos     = WorldPosition (14, 100)
 	}
 
 horseman :: WorldPosition -> Character
