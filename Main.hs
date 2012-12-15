@@ -75,9 +75,13 @@ canSee (Character {sight = s, pos = WorldPosition (x1, y1)}) (Character {pos = W
 	where
 	dist = Distance $ floor (sqrt $ fromIntegral ((x1-x2)^(2::Int) + (y1-y2)^(2::Int)) :: Double)
 
+isKeyUp :: SDL.Event -> Bool
+isKeyUp (SDL.KeyUp {}) = True
+isKeyUp _ = False
+
 updatePlayerAndWorld :: Bool -> [Int] -> [SDL.Event] -> Either Species (Character, World) -> Either Species (Character, World)
 updatePlayerAndWorld tick dice events (Right (p, w))
-	| tick = updated >>= (\(p', w') ->
+	| tick || not (null $ filter isKeyUp events) = updated >>= (\(p', w') ->
 		let
 			characters = mapMaybe fromCharacterCell (Map.elems w')
 			heroes = filter ((==Hero) . species) characters
