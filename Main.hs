@@ -102,7 +102,7 @@ worldPositionToScreenPosition (Screen {screenPos = WorldPosition (sx, sy)}) (Wor
 screenPositionToSDL :: ScreenPosition -> Maybe SDL.Rect
 screenPositionToSDL (ScreenPosition (x, y)) = Just $ SDL.Rect (x*32) (576 - (y*32)) 32 32
 
-draw :: (MonadIO m) => SDL.Surface -> Screen -> World -> m ()
+draw :: SDL.Surface -> Screen -> World -> MaybeT IO ()
 draw win screen world = liftIO $ do
 	roadColour <- mapColour win (SDL.Color 0xcc 0x00 0x00)
 	let Just (SDL.Rect {SDL.rectX = roadX}) = screenPositionToSDL $ worldPositionToScreenPosition screen (WorldPosition (10, 0))
