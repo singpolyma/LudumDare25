@@ -180,7 +180,7 @@ draw win plotFont _ _ (Left species) _ = liftIO $ do
 	True <- SDL.fillRect win (Just $ SDL.Rect 0 0 800 600) black
 	drawWrap win plotFont (10, 10) $ dieText species
 	SDL.flip win
-draw win plotFont (Images bg road notlock) screen (Right world) plot = liftIO $ do
+draw win plotFont (Images bg road notlock horse) screen (Right world) plot = liftIO $ do
 	mapM_ (\cell -> do
 			let rect = screenPositionToSDL $ worldPositionToScreenPosition screen cell
 			let x = case cell of
@@ -188,15 +188,19 @@ draw win plotFont (Images bg road notlock) screen (Right world) plot = liftIO $ 
 					_ -> bg
 			True <- SDL.blitSurface x Nothing win rect
 
-			case Map.lookup cell world of
-				Just (C (Character {species = Villan})) -> do
-					True <- SDL.blitSurface notlock Nothing win rect
-					return ()
-				Just (C c) | inLamp cell -> do
-					colour <- mapColour win $ colourForSpecies (species c)
-					True <- SDL.fillRect win (screenPositionToSDL $ worldPositionToScreenPosition screen (pos c)) colour
-					return ()
-				_ -> return ()
+			when (inLamp cell) $
+				case Map.lookup cell world of
+					Just (C (Character {species = Villan})) -> do
+						True <- SDL.blitSurface notlock Nothing win rect
+						return ()
+					Just (C (Character {species = Horseman})) -> do
+						True <- SDL.blitSurface horse Nothing win rect
+						return ()
+					Just (C c) | inLamp cell -> do
+						colour <- mapColour win $ colourForSpecies (species c)
+						True <- SDL.fillRect win (screenPositionToSDL $ worldPositionToScreenPosition screen (pos c)) colour
+						return ()
+					_ -> return ()
 		) (screenCells screen)
 
 
@@ -244,7 +248,8 @@ main = withExternalLibs $ do
 	bg <- SDL.displayFormatAlpha =<< SDL.load "./bg.png"
 	road <- SDL.displayFormatAlpha =<< SDL.load "./road.png"
 	notlock <- SDL.displayFormatAlpha =<< SDL.load "./notlock.png"
-	mainLoop win plotFont (Images bg road notlock)
+	horse <- SDL.displayFormatAlpha =<< SDL.load "./horseman.png"
+	mainLoop win plotFont (Images bg road notlock horse)
 
 	-- Need to do this so that SDL.TTF.quit will not segfault
 	finalizeForeignPtr plotFont
