@@ -67,9 +67,9 @@ moveToward pos@(WorldPosition (x1, y1)) (WorldPosition (x2, y2)) =
 
 spriteForSpecies :: Species -> Images -> SDL.Surface
 spriteForSpecies Villan = notlock
-spriteForSpecies Hero = undefined
 spriteForSpecies Horseman = horse
 spriteForSpecies Goat = goat
+spriteForSpecies Hero = hero
 
 canSee :: Character -> Character -> Bool
 canSee (Character {sight = s, pos = WorldPosition (x1, y1)}) (Character {pos = WorldPosition (x2, y2)}) =
@@ -242,7 +242,8 @@ main = withExternalLibs $ do
 	notlock <- SDL.displayFormatAlpha =<< SDL.load "./notlock.png"
 	horse <- SDL.displayFormatAlpha =<< SDL.load "./horseman.png"
 	goat <- SDL.displayFormatAlpha =<< SDL.load "./goat.png"
-	mainLoop win plotFont (Images bg road notlock horse goat)
+	hero <- SDL.displayFormatAlpha =<< SDL.load "./hero.png"
+	mainLoop win plotFont (Images bg road notlock horse goat hero)
 
 	-- Need to do this so that SDL.TTF.quit will not segfault
 	finalizeForeignPtr plotFont

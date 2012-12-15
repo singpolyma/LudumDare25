@@ -35,7 +35,8 @@ data Images = Images {
 		road :: SDL.Surface,
 		notlock :: SDL.Surface,
 		horse :: SDL.Surface,
-		goat :: SDL.Surface
+		goat :: SDL.Surface,
+		hero :: SDL.Surface
 	} deriving (Eq, Show)
 
 worldPositionX :: Lens WorldPosition Int

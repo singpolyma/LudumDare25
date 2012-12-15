@@ -2,7 +2,7 @@ module SomeMap (someMap, playerPosToScreenPos, insertCharacterToWorld, initialWo
 
 import Prelude ()
 import BasicPrelude
-import Types hiding (goat)
+import Types hiding (goat, hero)
 import System.Random (randomRIO)
 import qualified Data.Map as Map
 
