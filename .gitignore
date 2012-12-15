@@ -1,2 +1,6 @@
 *.swp
 Derive.hs
+dist/
+*.hi
+*.o
+report.html

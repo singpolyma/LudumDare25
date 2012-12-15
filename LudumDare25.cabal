@@ -1,0 +1,45 @@
+name:            LudumDare25-singpolyma
+version:         0.0.0
+cabal-version:   >= 1.8
+license:         OtherLicense
+license-file:    COPYING
+category:        Game
+copyright:       © 2012 Stephen Paul Weber
+author:          Stephen Paul Weber <singpolyma@singpolyma.net>
+maintainer:      Stephen Paul Weber <singpolyma@singpolyma.net>
+stability:       experimental
+tested-with:     GHC == 7.0.3
+synopsis:        You Are the Villan
+homepage:        http://github.com/singpolyma/LudumDare25
+bug-reports:     http://github.com/singpolyma/LudumDare25/issues
+build-type:      Simple
+description:
+        You have captured the boy king, but now must escape through the wooods.
+        Rumour has it there's a HERO about.
+
+extra-source-files:
+        README
+
+executable LudumDare25
+        main-is: Main.hs
+        ghc-options: -threaded
+        other-modules:
+                Types,
+                SomeMap,
+                Derive
+
+        build-depends:
+                base == 4.*,
+                containers,
+                errors,
+                elerea,
+                elerea-sdl,
+                SDL,
+                SDL-ttf,
+                data-lens,
+                basic-prelude,
+                random
+
+source-repository head
+        type:     git
+        location: git://github.com/singpolyma/LudumDare25.git

@@ -71,6 +71,7 @@ updatePlot :: Character -> Maybe Plot -> Maybe Plot
 updatePlot (Character {pos = WorldPosition (_,y)}) (Just Intro) | y < 5 = Just Intro
 updatePlot _ _ = Nothing
 
+composeState :: [SDL.Event] -> t1 -> t2 -> t -> Maybe ((t1, t2), t)
 composeState events screen world plot
 	| SDL.Quit `elem` events = Nothing
 	| otherwise = Just ((screen, world), plot)
@@ -91,7 +92,7 @@ signalNetwork initialWorld eventGen = (clockGen >>=) $ flip embed $ do
 	playerAndWorld <- transfer2 (initialPlayer, initialWorld) updatePlayerAndWorld dice events
 	screen <- transfer initialScreen (const updateScreen) (fmap fst playerAndWorld)
 	plot <- transfer (Just Intro) (const updatePlot) (fmap fst playerAndWorld)
-	return $ composeState <$> events <*> screen <*> (fmap snd playerAndWorld) <*> plot
+	return $ composeState <$> events <*> screen <*> fmap snd playerAndWorld <*> plot
 
 screenCells :: Screen -> [WorldPosition]
 screenCells (Screen {screenPos = WorldPosition (x, y)}) =
@@ -138,7 +139,7 @@ draw win plotFont screen world plot = liftIO $ do
 	drawPlot (x, y) txt = do
 		-- TODO: smartwrap?
 		(w, h) <- SDL.TTF.utf8Size plotFont txt
-		let linec = (floor $ (fromIntegral (length txt) / (fromIntegral w / 800))) - 5
+		let linec = floor (fromIntegral (length txt) / (fromIntegral w / 800::Rational)) - 5
 		rendered <- SDL.TTF.renderUTF8Blended plotFont (take linec txt) (SDL.Color 0xff 0xff 0xff)
 		True <- SDL.blitSurface rendered Nothing win (Just $ SDL.Rect x y 0 0)
 		drawPlot (x, y+h) (drop linec txt)

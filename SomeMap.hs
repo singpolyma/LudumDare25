@@ -27,7 +27,7 @@ horsemanIO = do
 	return $ horseman $ WorldPosition (x, y)
 
 mkWorld :: [Character] -> World
-mkWorld = Map.fromList . map (\c -> (pos c, C c))
+mkWorld = Map.fromList . map (pos &&& C)
 
 someMap :: IO World
 someMap = fmap (mkWorld . (hero:)) (replicateM 10 horsemanIO)
@@ -51,4 +51,4 @@ playerPosToScreenPos :: Character -> WorldPosition
 playerPosToScreenPos (Character {pos = WorldPosition (x, y)}) = WorldPosition (x - 12, y - 9)
 
 insertCharacterToWorld :: Character -> World -> World
-insertCharacterToWorld c w = Map.insert (pos c) (C c) w
+insertCharacterToWorld c = Map.insert (pos c) (C c)
