@@ -53,6 +53,12 @@ updateWorld (Right (player@(Character {pos = p}), world)) (SDL.KeyUp (SDL.Keysym
 	moveCharacter player (worldPositionX ^+= 1 $ p) world
 updateWorld (Right (player@(Character {pos = p}), world)) (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_LEFT})) =
 	moveCharacter player (worldPositionX ^-= 1 $ p) world
+updateWorld pass@(Right (player@(Character {pos = p}), world)) (SDL.MouseButtonUp x y _)
+	| y < 200 = moveCharacter player (worldPositionY ^+= 1 $ p) world
+	| y > 400 = moveCharacter player (worldPositionY ^-= 1 $ p) world
+	| x < 200 = moveCharacter player (worldPositionX ^-= 1 $ p) world
+	| x > 600 = moveCharacter player (worldPositionX ^+= 1 $ p) world
+	| otherwise = pass
 updateWorld p _ = p
 
 moveHorseFromDie :: Int -> WorldPosition -> WorldPosition
