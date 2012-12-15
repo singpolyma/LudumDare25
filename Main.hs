@@ -125,12 +125,6 @@ updatePlot (Just (Character {pos = WorldPosition (_,y)})) _ | y > 5 && y < 10 = 
 updatePlot (Just (Character {pos = WorldPosition (_,y)})) _ | y > 10 && y < 15 = Just Patrols
 updatePlot _ _ = Nothing
 
-composeState :: [SDL.Event] -> t1 -> Either Species t2 -> t -> Either Done ((t1, t2), t)
-composeState _ _ (Left s) _ = Left $ Died s
-composeState events screen (Right world) plot
-	| SDL.Quit `elem` events = Left Quit
-	| otherwise = Right ((screen, world), plot)
-
 clockGen :: SignalGen Ticks (Signal Bool)
 clockGen = do
 	ref <- execute $ newIORef 0
@@ -140,14 +134,27 @@ clockGen = do
 				return False
 		) =<< input
 
-signalNetwork :: World -> SignalGen Bool (Signal [SDL.Event]) -> SignalGen Ticks (Signal (Either Done ((Screen, World), Maybe Plot)))
-signalNetwork initialWorld eventGen = (clockGen >>=) $ flip embed $ do
+updateMusic :: [SDL.Event] -> Bool -> Bool
+updateMusic = flip $ foldl' (\state event -> case event of
+		SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_m}) -> not state
+		_ -> state
+	)
+
+composeState :: [SDL.Event] -> a -> Either Species b -> c -> d -> Either Done (((a, b), c), d)
+composeState _ _ (Left s) _ _ = Left $ Died s
+composeState events screen (Right world) plot music
+	| SDL.Quit `elem` events = Left Quit
+	| otherwise = Right (((screen, world), plot), music)
+
+signalNetwork :: Bool -> World -> SignalGen Bool (Signal [SDL.Event]) -> SignalGen Ticks (Signal (Either Done (((Screen, World), Maybe Plot), Bool)))
+signalNetwork musicState initialWorld eventGen = (clockGen >>=) $ flip embed $ do
 	events <- eventGen
 	dice   <- effectful $ replicateM 10 (randomRIO (1::Int, 20))
 	playerAndWorld <- transfer2 (Right (initialPlayer, initialWorld)) updatePlayerAndWorld dice events
+	music <- transfer musicState (const updateMusic) events
 	screen <- transfer initialScreen (const updateScreen) (fmap (hush . fmap fst) playerAndWorld)
 	plot <- transfer (Just Intro) (const updatePlot) (fmap (hush . fmap fst) playerAndWorld)
-	return $ composeState <$> events <*> screen <*> fmap (fmap snd) playerAndWorld <*> plot
+	return $ composeState <$> events <*> screen <*> fmap (fmap snd) playerAndWorld <*> plot <*> music
 
 plotText :: Plot -> String
 plotText Intro = "You are the evil mastermind Notlock.  Your plan to kidnap the boy king went off great, up until it was noticed that he was gone.  Now you are trapped in the forest on the way back to your lair, and must evade the searchers."
@@ -163,8 +170,10 @@ canSeeBox (Just (SDL.Rect x y _ _)) (Distance s) =
 	SDL.Rect (x - (s*32)) (y - (s*32)) (s*32*2 + 32) (s*32*2 + 32)
 canSeeBox _ _ = error "Impossible canSeeBox"
 
-draw :: (MonadIO m) => SDL.Surface -> SDL.TTF.Font -> Images -> Screen -> World -> Maybe Plot -> m ()
-draw win plotFont images@(Images {bg=bg, road=road}) screen world plot = liftIO $ do
+draw :: (MonadIO m) => SDL.Surface -> SDL.TTF.Font -> Images -> Screen -> World -> Maybe Plot -> Bool -> m ()
+draw win plotFont images@(Images {bg=bg, road=road}) screen world plot music = liftIO $ do
+	if music then SDL.Mixer.resumeMusic else SDL.Mixer.pauseMusic
+
 	-- Two passes.  One for background, and one for "stuff"
 	mapM_ (\cell -> do
 			let rect = screenPositionToSDL $ worldPositionToScreenPosition screen cell
@@ -186,17 +195,22 @@ draw win plotFont images@(Images {bg=bg, road=road}) screen world plot = liftIO 
 		) (screenCells screen)
 
 	maybe (return ()) (drawWrap win plotFont (10, 10) . plotText) plot
+
 	rendered <- SDL.TTF.renderUTF8Blended plotFont (Text.unpack $ show $ getL (worldPositionY.lensScreenPos) screen) (SDL.Color 0xff 0xff 0xff)
 	True <- SDL.blitSurface rendered Nothing win (Just $ SDL.Rect 5 550 0 0)
+
+	rendered <- SDL.TTF.renderUTF8Blended plotFont "m toggles music" (SDL.Color 0xff 0xff 0xff)
+	True <- SDL.blitSurface rendered Nothing win (Just $ SDL.Rect 650 550 0 0)
+
 	SDL.flip win
 	where
 	inLamp pos = let ScreenPosition (x,y) = worldPositionToScreenPosition screen pos in
 		x >= 7 && x <= 17 && y >= 4 && y <= 14
 
-mainLoop :: SDL.Surface -> SDL.TTF.Font -> Images -> IO ()
-mainLoop win plotFont images = eitherT handleDone (error "impossible") $ do
-	states <- liftIO $ (signalNetwork <$> initialWorld) >>= sdlLoop 33
-	mapM_ (either throwT (uncurry $ uncurry $ draw win plotFont images)) states
+mainLoop :: SDL.Surface -> SDL.TTF.Font -> Images -> Bool -> IO ()
+mainLoop win plotFont images musicState = eitherT handleDone (error "impossible") $ do
+	states <- liftIO $ (signalNetwork musicState <$> initialWorld) >>= sdlLoop 33
+	mapM_ (either throwT (uncurry $ uncurry $ uncurry $ draw win plotFont images)) states
 	where
 	handleDone Quit = return ()
 	handleDone (Died s) = do
@@ -209,7 +223,8 @@ mainLoop win plotFont images = eitherT handleDone (error "impossible") $ do
 	pause = do
 		e <- SDL.waitEventBlocking
 		case e of
-			SDL.KeyDown _ -> mainLoop win plotFont images
+			SDL.KeyDown _ -> SDL.Mixer.pausedMusic >>=
+				(\paused -> mainLoop win plotFont images (not paused))
 			SDL.Quit -> return ()
 			_ -> pause
 
@@ -236,7 +251,7 @@ main = withExternalLibs $ do
 	hero <- SDL.displayFormatAlpha =<< SDL.load "./hero.png"
 	riff <- SDL.Mixer.loadMUS "./riff.ogg"
 	SDL.Mixer.playMusic riff (-1)
-	mainLoop win plotFont (Images bg road notlock horse goat hero)
+	mainLoop win plotFont (Images bg road notlock horse goat hero) True
 
 	-- Need to do this so that SDL.TTF.quit will not segfault
 	finalizeForeignPtr plotFont
