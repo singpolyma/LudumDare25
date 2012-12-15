@@ -149,9 +149,24 @@ updateMusic = flip $ foldl' (\state event -> case event of
 		_ -> state
 	)
 
-composeState :: [SDL.Event] -> a -> Either Species b -> c -> d -> Either Done (((a, b), c), d)
-composeState _ _ (Left s) _ _ = Left $ Died s
-composeState events screen (Right world) plot music
+updateKonami :: [SDL.SDLKey] -> SDL.Event -> [SDL.SDLKey]
+updateKonami x@[] (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_UP})) = SDL.SDLK_UP : x
+updateKonami x@[SDL.SDLK_UP] (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_UP})) = SDL.SDLK_UP : x
+updateKonami x@[SDL.SDLK_UP, SDL.SDLK_UP] (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_DOWN})) = SDL.SDLK_DOWN : x
+updateKonami x@[SDL.SDLK_DOWN, SDL.SDLK_UP, SDL.SDLK_UP] (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_DOWN})) = SDL.SDLK_DOWN : x
+updateKonami x@[SDL.SDLK_DOWN, SDL.SDLK_DOWN, SDL.SDLK_UP, SDL.SDLK_UP] (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_LEFT})) = SDL.SDLK_LEFT : x
+updateKonami x@[SDL.SDLK_LEFT, SDL.SDLK_DOWN, SDL.SDLK_DOWN, SDL.SDLK_UP, SDL.SDLK_UP] (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_RIGHT})) = SDL.SDLK_RIGHT : x
+updateKonami x@[SDL.SDLK_RIGHT, SDL.SDLK_LEFT, SDL.SDLK_DOWN, SDL.SDLK_DOWN, SDL.SDLK_UP, SDL.SDLK_UP] (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_LEFT})) = SDL.SDLK_LEFT : x
+updateKonami x@[SDL.SDLK_LEFT,SDL.SDLK_RIGHT, SDL.SDLK_LEFT, SDL.SDLK_DOWN, SDL.SDLK_DOWN, SDL.SDLK_UP, SDL.SDLK_UP] (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_RIGHT})) = SDL.SDLK_RIGHT : x
+updateKonami x@[SDL.SDLK_RIGHT,SDL.SDLK_LEFT,SDL.SDLK_RIGHT, SDL.SDLK_LEFT, SDL.SDLK_DOWN, SDL.SDLK_DOWN, SDL.SDLK_UP, SDL.SDLK_UP] (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_b})) = SDL.SDLK_b : x
+updateKonami x@[SDL.SDLK_b,SDL.SDLK_RIGHT,SDL.SDLK_LEFT,SDL.SDLK_RIGHT, SDL.SDLK_LEFT, SDL.SDLK_DOWN, SDL.SDLK_DOWN, SDL.SDLK_UP, SDL.SDLK_UP] (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_a})) = SDL.SDLK_a : x
+updateKonami _ (SDL.KeyUp _) = []
+updateKonami x _ = x
+
+composeState :: [SDL.Event] -> a -> Either Species b -> c -> d -> [SDL.SDLKey] -> Either Done (((a, b), c), d)
+composeState _ _ (Left s) _ _ _ = Left $ Died s
+composeState _ _ _ _ _ konami | length konami == 10 = Left Konami
+composeState events screen (Right world) plot music _
 	| SDL.Quit `elem` events = Left Quit
 	| otherwise = Right (((screen, world), plot), music)
 
@@ -163,7 +178,8 @@ signalNetwork musicState initialWorld eventGen = (clockGen >>=) $ flip embed $ d
 	music <- transfer musicState (const updateMusic) events
 	screen <- transfer initialScreen (const updateScreen) (fmap (hush . fmap fst) playerAndWorld)
 	plot <- transfer (Just Intro) (const updatePlot) (fmap (hush . fmap fst) playerAndWorld)
-	return $ composeState <$> events <*> screen <*> fmap (fmap snd) playerAndWorld <*> plot <*> music
+	konami <- transfer [] (const $ flip $ foldl' updateKonami) events
+	return $ composeState <$> events <*> screen <*> fmap (fmap snd) playerAndWorld <*> plot <*> music <*> konami
 
 plotText :: Plot -> String
 plotText Intro = "You are the evil mastermind Notlock.  Your plan to kidnap the boy king went off great, up until it was noticed that he was gone.  Now you are trapped in the forest on the way back to your northern lair, and must evade the searchers."
@@ -226,10 +242,19 @@ mainLoop win plotFont images musicState = eitherT handleDone (error "impossible"
 	mapM_ (either throwT (uncurry $ uncurry $ uncurry $ draw win plotFont images)) states
 	where
 	handleDone Quit = return ()
+	handleDone Konami = do
+		clear
+		drawWrap win plotFont (10, 10) "You found the secret way to win!  Press any key to play again."
+		goPause
 	handleDone (Died s) = do
+		clear
+		drawWrap win plotFont (10, 10) $ dieText s
+		goPause
+	clear = do
 		black <- mapColour win (SDL.Color 0x00 0x00 0x00)
 		True <- SDL.fillRect win (Just $ SDL.Rect 0 0 800 600) black
-		drawWrap win plotFont (10, 10) $ dieText s
+		return ()
+	goPause = do
 		SDL.flip win
 		threadDelay 2000000 -- Ignore any events for some time, to prevent accidents
 		pause

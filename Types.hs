@@ -4,7 +4,7 @@ import BasicPrelude
 import Data.Lens.Common
 import qualified Graphics.UI.SDL as SDL
 
-data Done = Quit | Died Species
+data Done = Quit | Died Species | Konami
 
 data ItemKind = Shrub deriving (Eq, Show)
 data Species = Villan | Hero | Horseman | Goat | Guard deriving (Eq, Show)
