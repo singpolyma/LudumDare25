@@ -169,7 +169,7 @@ screenPositionToSDL :: ScreenPosition -> Maybe SDL.Rect
 screenPositionToSDL (ScreenPosition (x, y)) = Just $ SDL.Rect (x*32) (576 - (y*32)) 32 32
 
 plotText :: Plot -> String
-plotText Intro = "You are the evil mastermind Notlock.  Your plan to kidnap the boy king went off great, up until it was notice he was gone.  Now you are trapped in the forest on the way back to your lair, and must evade the searchers."
+plotText Intro = "You are the evil mastermind Notlock.  Your plan to kidnap the boy king went off great, up until it was noticed that he was gone.  Now you are trapped in the forest on the way back to your lair, and must evade the searchers."
 plotText HeroRumour = "You have heard that there is a HERO abount.  Best be careful."
 plotText Patrols = "Goatback subjects are searching back and forth, but cannot see very far.  Horsemen search only the road, but can see much further."
 
@@ -212,10 +212,14 @@ drawWrap win plotFont = go
 	go (x, y) txt = do
 		-- TODO: smartwrap?
 		(w, h) <- SDL.TTF.utf8Size plotFont txt
-		let linec = floor (fromIntegral (length txt) / (fromIntegral w / 800::Rational)) - 5
-		rendered <- SDL.TTF.renderUTF8Blended plotFont (take linec txt) (SDL.Color 0xff 0xff 0xff)
+		let linec = floor (fromIntegral (length txt) / (fromIntegral w / 800::Rational))
+		let smartWrappedLine = smartWrap linec txt
+		rendered <- SDL.TTF.renderUTF8Blended plotFont smartWrappedLine (SDL.Color 0xff 0xff 0xff)
 		True <- SDL.blitSurface rendered Nothing win (Just $ SDL.Rect x y 0 0)
-		go (x, y+h) (drop linec txt)
+		go (x, y+h) (drop (length smartWrappedLine) txt)
+	smartWrap c s
+		| length s < c = s
+		| otherwise =  init $ dropWhileEnd (/=' ') $ take c s
 
 mainLoop :: SDL.Surface -> SDL.TTF.Font -> Images -> IO ()
 mainLoop win plotFont images = eitherT handleDone (error "impossible") $ do
