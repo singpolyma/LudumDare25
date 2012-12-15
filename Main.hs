@@ -19,6 +19,7 @@ import qualified Graphics.UI.SDL as SDL
 import qualified Graphics.UI.SDL.TTF as SDL.TTF
 
 import qualified Data.Map as Map
+import qualified Data.Text as Text
 
 movePlayer :: Character -> WorldPosition -> World -> (Character, World)
 movePlayer player newPos world =
@@ -163,6 +164,8 @@ draw win plotFont screen world plot = liftIO $ do
 		) (screenCells screen)
 
 	maybe (return ()) (drawPlot (10, 10) . plotText) plot
+	rendered <- SDL.TTF.renderUTF8Blended plotFont (Text.unpack $ show $ getL (worldPositionY.lensScreenPos) screen) (SDL.Color 0xff 0xff 0xff)
+	True <- SDL.blitSurface rendered Nothing win (Just $ SDL.Rect 5 550 0 0)
 	SDL.flip win
 	where
 	inLamp pos = let ScreenPosition (x,y) = worldPositionToScreenPosition screen pos in

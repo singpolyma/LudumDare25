@@ -39,7 +39,8 @@ executable LudumDare25
                 data-lens,
                 basic-prelude,
                 random,
-                utility-ht
+                utility-ht,
+                text
 
 source-repository head
         type:     git
