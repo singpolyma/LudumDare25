@@ -180,27 +180,28 @@ draw win plotFont _ _ (Left species) _ = liftIO $ do
 	True <- SDL.fillRect win (Just $ SDL.Rect 0 0 800 600) black
 	drawWrap win plotFont (10, 10) $ dieText species
 	SDL.flip win
-draw win plotFont (Images bg road) screen (Right world) plot = liftIO $ do
-	mapM_ (\cell ->
+draw win plotFont (Images bg road notlock) screen (Right world) plot = liftIO $ do
+	mapM_ (\cell -> do
+			let rect = screenPositionToSDL $ worldPositionToScreenPosition screen cell
+			let x = case cell of
+					WorldPosition (x, _) | x >= 10 && x <= 13 -> road
+					_ -> bg
+			True <- SDL.blitSurface x Nothing win rect
+
 			case Map.lookup cell world of
+				Just (C (Character {species = Villan})) -> do
+					True <- SDL.blitSurface notlock Nothing win rect
+					return ()
 				Just (C c) | inLamp cell -> do
 					colour <- mapColour win $ colourForSpecies (species c)
 					True <- SDL.fillRect win (screenPositionToSDL $ worldPositionToScreenPosition screen (pos c)) colour
 					return ()
-				_ ->
-					let
-						rect = screenPositionToSDL $ worldPositionToScreenPosition screen cell
-						x = case cell of
-							WorldPosition (x, _) | x >= 10 && x <= 13 -> road
-							_ -> bg
-					in do
-						True <- SDL.blitSurface x Nothing win rect
-						return ()
+				_ -> return ()
 		) (screenCells screen)
 
 
 	let Just (SDL.Rect x1 y1 _ _) = screenPositionToSDL $ ScreenPosition (7, 14)
-	True <- boxAlpha win (SDL.Rect x1 y1 352 352) (SDL.Color 0xcc 0xcc 0x00) 0x99
+	True <- boxAlpha win (SDL.Rect x1 y1 352 352) (SDL.Color 0xcc 0xcc 0x00) 0x33
 
 	maybe (return ()) (drawWrap win plotFont (10, 10) . plotText) plot
 	rendered <- SDL.TTF.renderUTF8Blended plotFont (Text.unpack $ show $ getL (worldPositionY.lensScreenPos) screen) (SDL.Color 0xff 0xff 0xff)
@@ -242,7 +243,8 @@ main = withExternalLibs $ do
 	plotFont <- SDL.TTF.openFont "./PortLligatSans-Regular.ttf" 20
 	bg <- SDL.displayFormatAlpha =<< SDL.load "./bg.png"
 	road <- SDL.displayFormatAlpha =<< SDL.load "./road.png"
-	mainLoop win plotFont (Images bg road)
+	notlock <- SDL.displayFormatAlpha =<< SDL.load "./notlock.png"
+	mainLoop win plotFont (Images bg road notlock)
 
 	-- Need to do this so that SDL.TTF.quit will not segfault
 	finalizeForeignPtr plotFont

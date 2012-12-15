@@ -32,7 +32,8 @@ data Character = Character {
 
 data Images = Images {
 		bg :: SDL.Surface,
-		road :: SDL.Surface
+		road :: SDL.Surface,
+		notlock :: SDL.Surface
 	} deriving (Eq, Show)
 
 worldPositionX :: Lens WorldPosition Int
