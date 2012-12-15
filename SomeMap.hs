@@ -36,14 +36,14 @@ horseman p = Character {
 horsemanIO :: IO Character
 horsemanIO = do
 	x <- randomRIO (10, 13)
-	y <- randomRIO ( 5,100)
+	y <- randomRIO (10,100)
 	return $ horseman $ WorldPosition (x, y)
 
 mkWorld :: [Character] -> World
 mkWorld = Map.fromList . map (pos &&& C)
 
 someMap :: IO World
-someMap = (mkWorld . (hero:)) <$> ((++) <$> replicateM 10 horsemanIO <*> replicateM 50 goatIO)
+someMap = (mkWorld . (hero:)) <$> ((++) <$> replicateM 10 horsemanIO <*> replicateM 40 goatIO)
 
 initialPlayer :: Character
 initialPlayer = Character {

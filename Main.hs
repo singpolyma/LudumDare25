@@ -123,6 +123,7 @@ updateScreen _ = id
 updatePlot :: Maybe Character -> Maybe Plot -> Maybe Plot
 updatePlot (Just (Character {pos = WorldPosition (_,y)})) (Just Intro) | y < 5 = Just Intro
 updatePlot (Just (Character {pos = WorldPosition (_,y)})) _ | y > 5 && y < 10 = Just HeroRumour
+updatePlot (Just (Character {pos = WorldPosition (_,y)})) _ | y > 10 && y < 15 = Just Patrols
 updatePlot _ _ = Nothing
 
 composeState :: [SDL.Event] -> t1 -> t2 -> t -> Maybe ((t1, t2), t)
@@ -167,6 +168,7 @@ screenPositionToSDL (ScreenPosition (x, y)) = Just $ SDL.Rect (x*32) (576 - (y*3
 plotText :: Plot -> String
 plotText Intro = "You are the evil mastermind Notlock.  Your plan to kidnap the boy king went off great, up until it was notice he was gone.  Now you are trapped in the forest on the way back to your lair, and must evade the searchers."
 plotText HeroRumour = "You have heard that there is a HERO abount.  Best be careful."
+plotText Patrols = "Goatback subjects are searching back and forth, but cannot see very far.  Horsemen search only the road, but can see much further."
 
 dieText :: Species -> String
 dieText Hero = "The hero has defeated you, but I suppose that was inevitable."

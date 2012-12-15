@@ -5,7 +5,7 @@ import Data.Lens.Common
 import qualified Graphics.UI.SDL as SDL
 
 data Species = Villan | Hero | Horseman | Goat deriving (Eq, Show)
-data Plot = Intro | HeroRumour deriving (Eq, Show)
+data Plot = Intro | HeroRumour | Patrols deriving (Eq, Show)
 
 newtype WorldPosition = WorldPosition (Int, Int) deriving (Eq, Ord, Show)
 newtype ScreenPosition = ScreenPosition (Int, Int) deriving (Eq, Ord, Show)
