@@ -9,6 +9,7 @@ import Data.IORef
 import Foreign (finalizeForeignPtr)
 import System.Random
 import Control.Error
+import Data.Bool.HT
 
 import Data.Lens.Common
 
@@ -47,15 +48,33 @@ moveFromDie die (WorldPosition (x, y))
 	| die < 20  = WorldPosition (x, y-1)
 	| otherwise = WorldPosition (x, y)
 
+moveToward :: WorldPosition -> WorldPosition -> WorldPosition
+moveToward pos@(WorldPosition (x1, y1)) (WorldPosition (x2, y2)) =
+	select pos [
+		(x1 > x2, WorldPosition (x1-1, y1)),
+		(y1 > y2, WorldPosition (x1, y1-1)),
+		(x1 < x2, WorldPosition (x1+1, y1)),
+		(y1 < y2, WorldPosition (x1, y1+2))
+	]
+
 colourForSpecies :: Species -> SDL.Color
 colourForSpecies Villan = SDL.Color 0xcc 0xcc 0xcc
 colourForSpecies Hero = SDL.Color 0x00 0x00 0xcc
 colourForSpecies Horseman = SDL.Color 0x00 0xcc 0x00
 
+canSee :: Character -> Character -> Bool
+canSee (Character {sight = s, pos = WorldPosition (x1, y1)}) (Character {pos = WorldPosition (x2, y2)}) =
+	dist <= s
+	where
+	dist = Distance $ floor $ sqrt $ fromIntegral ((x1-x2)^2 + (y1-y2)^2)
+
 updatePlayerAndWorld :: Bool -> [Int] -> [SDL.Event] -> (Character, World) -> (Character, World)
 updatePlayerAndWorld tick dice events (p, w)
 	| tick = (p', foldl' (\world (idx, horseman) ->
-			snd $ movePlayer horseman (moveFromDie (selectDie idx) (pos horseman)) world
+			if horseman `canSee` p' then
+				snd $ movePlayer horseman (moveToward (pos horseman) (pos p')) world
+			else
+				snd $ movePlayer horseman (moveFromDie (selectDie idx) (pos horseman)) world
 		) w' (zip [0..] horsemen))
 	| otherwise = (p', w')
 	where

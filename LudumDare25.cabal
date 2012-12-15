@@ -38,7 +38,8 @@ executable LudumDare25
                 SDL-ttf,
                 data-lens,
                 basic-prelude,
-                random
+                random,
+                utility-ht
 
 source-repository head
         type:     git
