@@ -16,7 +16,7 @@ hero = Character {
 goat :: WorldPosition -> Character
 goat p = Character {
 		species = Goat,
-		sight   = Distance 4,
+		sight   = Distance 2,
 		pos     = p
 	}
 
@@ -29,7 +29,7 @@ goatIO = do
 horseman :: WorldPosition -> Character
 horseman p = Character {
 		species = Horseman,
-		sight   = Distance 2,
+		sight   = Distance 5,
 		pos     = p
 	}
 
