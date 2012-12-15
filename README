@@ -1,2 +1,22 @@
 You have captured the boy king, but now must escape through the wooods.
 Rumour has it there's a HERO about.
+
+== Installation ==
+
+You will need ghc and cabal-install to build this from source.  On Debian you can get these with:
+
+	sudo apt-get install ghc cabal-install
+
+On windows you can get them by installing the Haskell Platform from <http://haskell.org>.  Then run the following command:
+
+	cabal install containers errors elerea elerea-sdl SDL SDL-image SDL-ttf data-lens basic-prelude random utility-ht text
+
+and then finally the normal:
+
+	make
+
+You can run the game by running:
+
+	dist/build/LudumDare25/LudumDare25
+
+(Note that the executable *MUST* by run while you are in the folder with the assets.)
