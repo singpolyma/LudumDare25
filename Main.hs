@@ -100,7 +100,7 @@ clockGen = do
 	ref <- execute $ newIORef 0
 	effectful1 (\now -> do
 			t <- readIORef ref
-			if (now - t) >= 1000 then writeIORef ref now >> return True else
+			if (now - t) >= 500 then writeIORef ref now >> return True else
 				return False
 		) =<< input
 
