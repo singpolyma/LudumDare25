@@ -67,6 +67,12 @@ moveToward pos@(WorldPosition (x1, y1)) (WorldPosition (x2, y2)) =
 		(y1 < y2, WorldPosition (x1, y1+2))
 	]
 
+colourForSpecies :: Species -> SDL.Color
+colourForSpecies Villan = SDL.Color 0xcc 0xcc 0xcc
+colourForSpecies Hero = SDL.Color 0x00 0x00 0xcc
+colourForSpecies Horseman = SDL.Color 0x00 0xcc 0x00
+colourForSpecies Goat = SDL.Color 0x99 0x99 0x00
+
 spriteForSpecies :: Species -> Images -> SDL.Surface
 spriteForSpecies Villan = notlock
 spriteForSpecies Horseman = horse
@@ -177,25 +183,31 @@ dieText :: Species -> String
 dieText Hero = "The hero has defeated you, but I suppose that was inevitable.  Press any key to try again."
 dieText x = "You have been killed by a " ++ Text.unpack (show x) ++ ".  Press any key to try again."
 
+canSeeBox :: Maybe SDL.Rect -> Distance -> SDL.Rect
+canSeeBox (Just (SDL.Rect x y _ _)) (Distance s) =
+	SDL.Rect (x - (s*32)) (y - (s*32)) (s*32*2) (s*32*2)
+
 draw :: (MonadIO m) => SDL.Surface -> SDL.TTF.Font -> Images -> Screen -> World -> Maybe Plot -> m ()
 draw win plotFont images@(Images {bg=bg, road=road}) screen world plot = liftIO $ do
+	-- Two passes.  One for background, and one for "stuff"
 	mapM_ (\cell -> do
 			let rect = screenPositionToSDL $ worldPositionToScreenPosition screen cell
 			let x = case cell of
 					WorldPosition (x, _) | x >= 10 && x <= 13 -> road
 					_ -> bg
 			True <- SDL.blitSurface x Nothing win rect
+			return ()
+		) (screenCells screen)
 
+	mapM_ (\cell -> do
+			let rect = screenPositionToSDL $ worldPositionToScreenPosition screen cell
 			case Map.lookup cell world of
 				Just (C c) | inLamp cell -> do
+					True <- boxAlpha win (canSeeBox rect (sight c)) (colourForSpecies $ species c) 0x33
 					True <- SDL.blitSurface (spriteForSpecies (species c) images) Nothing win rect
 					return ()
 				_ -> return ()
 		) (screenCells screen)
-
-
-	let Just (SDL.Rect x1 y1 _ _) = screenPositionToSDL $ ScreenPosition (7, 14)
-	True <- boxAlpha win (SDL.Rect x1 y1 352 352) (SDL.Color 0xcc 0xcc 0x00) 0x33
 
 	maybe (return ()) (drawWrap win plotFont (10, 10) . plotText) plot
 	rendered <- SDL.TTF.renderUTF8Blended plotFont (Text.unpack $ show $ getL (worldPositionY.lensScreenPos) screen) (SDL.Color 0xff 0xff 0xff)
