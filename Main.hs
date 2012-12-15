@@ -5,6 +5,7 @@ import BasicPrelude
 import Types
 import SomeMap
 import Derive
+import Control.Concurrent (threadDelay)
 import Data.IORef
 import Foreign (finalizeForeignPtr, touchForeignPtr)
 import System.Random
@@ -127,10 +128,11 @@ updatePlot (Just (Character {pos = WorldPosition (_,y)})) _ | y > 5 && y < 10 = 
 updatePlot (Just (Character {pos = WorldPosition (_,y)})) _ | y > 10 && y < 15 = Just Patrols
 updatePlot _ _ = Nothing
 
-composeState :: [SDL.Event] -> t1 -> t2 -> t -> Maybe ((t1, t2), t)
-composeState events screen world plot
-	| SDL.Quit `elem` events = Nothing
-	| otherwise = Just ((screen, world), plot)
+composeState :: [SDL.Event] -> t1 -> Either Species t2 -> t -> Either Done ((t1, t2), t)
+composeState _ _ (Left s) _ = Left $ Died s
+composeState events screen (Right world) plot
+	| SDL.Quit `elem` events = Left Quit
+	| otherwise = Right ((screen, world), plot)
 
 clockGen :: SignalGen Ticks (Signal Bool)
 clockGen = do
@@ -141,7 +143,7 @@ clockGen = do
 				return False
 		) =<< input
 
-signalNetwork :: World -> SignalGen Bool (Signal [SDL.Event]) -> SignalGen Ticks (Signal (Maybe ((Screen, Either Species World), Maybe Plot)))
+signalNetwork :: World -> SignalGen Bool (Signal [SDL.Event]) -> SignalGen Ticks (Signal (Either Done ((Screen, World), Maybe Plot)))
 signalNetwork initialWorld eventGen = (clockGen >>=) $ flip embed $ do
 	events <- eventGen
 	dice   <- effectful $ replicateM 10 (randomRIO (1::Int, 20))
@@ -172,16 +174,11 @@ plotText HeroRumour = "You have heard that there is a HERO abount.  Best be care
 plotText Patrols = "Goatback subjects are searching back and forth, but cannot see very far.  Horsemen search only the road, but can see much further."
 
 dieText :: Species -> String
-dieText Hero = "The hero has defeated you, but I suppose that was inevitable."
-dieText x = "You have been killed by a " ++ Text.unpack (show x) ++ ".  You can exit now."
+dieText Hero = "The hero has defeated you, but I suppose that was inevitable.  Press any key to try again."
+dieText x = "You have been killed by a " ++ Text.unpack (show x) ++ ".  Press any key to try again."
 
-draw :: SDL.Surface -> SDL.TTF.Font -> Images -> Screen -> Either Species World -> Maybe Plot -> MaybeT IO ()
-draw win plotFont _ _ (Left species) _ = liftIO $ do
-	black <- mapColour win (SDL.Color 0x00 0x00 0x00)
-	True <- SDL.fillRect win (Just $ SDL.Rect 0 0 800 600) black
-	drawWrap win plotFont (10, 10) $ dieText species
-	SDL.flip win
-draw win plotFont images@(Images {bg=bg, road=road}) screen (Right world) plot = liftIO $ do
+draw :: (MonadIO m) => SDL.Surface -> SDL.TTF.Font -> Images -> Screen -> World -> Maybe Plot -> m ()
+draw win plotFont images@(Images {bg=bg, road=road}) screen world plot = liftIO $ do
 	mapM_ (\cell -> do
 			let rect = screenPositionToSDL $ worldPositionToScreenPosition screen cell
 			let x = case cell of
@@ -221,9 +218,24 @@ drawWrap win plotFont = go
 		go (x, y+h) (drop linec txt)
 
 mainLoop :: SDL.Surface -> SDL.TTF.Font -> Images -> IO ()
-mainLoop win plotFont images = void $ runMaybeT $ do
+mainLoop win plotFont images = eitherT handleDone (error "impossible") $ do
 	states <- liftIO $ (signalNetwork <$> initialWorld) >>= sdlLoop 33
-	mapM_ (maybe mzero (uncurry $ uncurry $ draw win plotFont images)) states
+	mapM_ (either throwT (uncurry $ uncurry $ draw win plotFont images)) states
+	where
+	handleDone Quit = return ()
+	handleDone (Died s) = do
+		black <- mapColour win (SDL.Color 0x00 0x00 0x00)
+		True <- SDL.fillRect win (Just $ SDL.Rect 0 0 800 600) black
+		drawWrap win plotFont (10, 10) $ dieText s
+		SDL.flip win
+		threadDelay 2000000 -- Ignore any events for some time, to prevent accidents
+		pause
+	pause = do
+		e <- SDL.waitEventBlocking
+		case e of
+			SDL.KeyDown _ -> mainLoop win plotFont images
+			SDL.Quit -> return ()
+			_ -> pause
 
 withExternalLibs :: IO () -> IO ()
 withExternalLibs f = SDL.withInit [SDL.InitEverything] $ do
