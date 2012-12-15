@@ -21,26 +21,25 @@ import qualified Graphics.UI.SDL.TTF as SDL.TTF
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 
-movePlayer :: Character -> WorldPosition -> World -> (Character, World)
-movePlayer player newPos world =
-	(movedPlayer, insertCharacterToWorld movedPlayer $ Map.delete (pos player) world)
-	{-
+moveCharacter :: Character -> WorldPosition -> World -> Either Species (Character, World)
+moveCharacter player newPos world =
 	case Map.lookup newPos world of
-		Nothing -> (movedPlayer, Map.delete (pos player) $ insertCharacterToWorld movedPlayer world)
-		Just _ -> error "TODO: What happens if we move onto something?"
-	-}
+		Nothing -> Right (movedPlayer, Map.delete (pos player) $ insertCharacterToWorld movedPlayer world)
+		Just (C (Character {species = Villan})) -> Left $ species player
+		Just (C x) | species player == Villan -> Left $ species x
+		_ -> Right (player, world)
 	where
 	movedPlayer = setL lensPos newPos player
 
-updateWorld :: (Character, World) -> SDL.Event -> (Character, World)
-updateWorld (player@(Character {pos = p}), world) (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_UP})) =
-	movePlayer player (worldPositionY ^+= 1 $ p) world
-updateWorld (player@(Character {pos = p}), world) (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_DOWN})) =
-	movePlayer player (worldPositionY ^-= 1 $ p) world
-updateWorld (player@(Character {pos = p}), world) (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_RIGHT})) =
-	movePlayer player (worldPositionX ^+= 1 $ p) world
-updateWorld (player@(Character {pos = p}), world) (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_LEFT})) =
-	movePlayer player (worldPositionX ^-= 1 $ p) world
+updateWorld :: Either Species (Character, World) -> SDL.Event -> Either Species (Character, World)
+updateWorld (Right (player@(Character {pos = p}), world)) (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_UP})) =
+	moveCharacter player (worldPositionY ^+= 1 $ p) world
+updateWorld (Right (player@(Character {pos = p}), world)) (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_DOWN})) =
+	moveCharacter player (worldPositionY ^-= 1 $ p) world
+updateWorld (Right (player@(Character {pos = p}), world)) (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_RIGHT})) =
+	moveCharacter player (worldPositionX ^+= 1 $ p) world
+updateWorld (Right (player@(Character {pos = p}), world)) (SDL.KeyUp (SDL.Keysym {SDL.symKey = SDL.SDLK_LEFT})) =
+	moveCharacter player (worldPositionX ^-= 1 $ p) world
 updateWorld p _ = p
 
 moveFromDie :: Int -> WorldPosition -> WorldPosition
@@ -69,36 +68,41 @@ canSee (Character {sight = s, pos = WorldPosition (x1, y1)}) (Character {pos = W
 	where
 	dist = Distance $ floor (sqrt $ fromIntegral ((x1-x2)^(2::Int) + (y1-y2)^(2::Int)) :: Double)
 
-updatePlayerAndWorld :: Bool -> [Int] -> [SDL.Event] -> (Character, World) -> (Character, World)
-updatePlayerAndWorld tick dice events (p, w)
-	| tick = (p',
+updatePlayerAndWorld :: Bool -> [Int] -> [SDL.Event] -> Either Species (Character, World) -> Either Species (Character, World)
+updatePlayerAndWorld tick dice events (Right (p, w))
+	| tick = updated >>= (\(p', w') ->
+		let
+			characters = mapMaybe fromCharacterCell (Map.elems w')
+			heroes = filter ((==Hero) . species) characters
+			horsemen = filter ((==Horseman) . species) characters
+		in
+		fmap ((,) p') $
 		updateWorldFor heroes (\world (_, hero) ->
 			if hero `canSee` p' then
-				snd $ movePlayer hero (moveToward (pos hero) (pos p')) world
+				fmap snd $ moveCharacter hero (moveToward (pos hero) (pos p')) world
 			else
-				world
-		) $
+				return world
+		) =<<
 		updateWorldFor horsemen (\world (idx, horseman) ->
 			if horseman `canSee` p' then
-				snd $ movePlayer horseman (moveToward (pos horseman) (pos p')) world
+				fmap snd $ moveCharacter horseman (moveToward (pos horseman) (pos p')) world
 			else
-				snd $ movePlayer horseman (moveFromDie (selectDie idx) (pos horseman)) world
+				fmap snd $ moveCharacter horseman (moveFromDie (selectDie idx) (pos horseman)) world
 		) w')
-	| otherwise = (p', w')
+	| otherwise = updated
 	where
-	updateWorldFor doodz f world = foldl' f world (zip [(0::Int)..] doodz)
+	updateWorldFor doodz f world = foldM f world (zip [(0::Int)..] doodz)
 	selectDie idx = dice !! (idx `mod` length dice) -- TODO: this is slow
-	heroes = filter ((==Hero) . species) characters
-	horsemen = filter ((==Horseman) . species) characters
-	characters = mapMaybe fromCharacterCell (Map.elems w')
-	(p', w') = foldl' updateWorld (p, w) events
+	updated = foldl' updateWorld (Right (p, w)) events
+updatePlayerAndWorld _ _ _ l = l
 
-updateScreen :: Character -> Screen -> Screen
-updateScreen player = setL lensScreenPos (playerPosToScreenPos player)
+updateScreen :: Maybe Character -> Screen -> Screen
+updateScreen (Just player) = setL lensScreenPos (playerPosToScreenPos player)
+updateScreen _ = id
 
-updatePlot :: Character -> Maybe Plot -> Maybe Plot
-updatePlot (Character {pos = WorldPosition (_,y)}) (Just Intro) | y < 5 = Just Intro
-updatePlot (Character {pos = WorldPosition (_,y)}) _ | y > 5 && y < 10 = Just HeroRumour
+updatePlot :: Maybe Character -> Maybe Plot -> Maybe Plot
+updatePlot (Just (Character {pos = WorldPosition (_,y)})) (Just Intro) | y < 5 = Just Intro
+updatePlot (Just (Character {pos = WorldPosition (_,y)})) _ | y > 5 && y < 10 = Just HeroRumour
 updatePlot _ _ = Nothing
 
 composeState :: [SDL.Event] -> t1 -> t2 -> t -> Maybe ((t1, t2), t)
@@ -115,14 +119,14 @@ clockGen = do
 				return False
 		) =<< input
 
-signalNetwork :: World -> SignalGen Bool (Signal [SDL.Event]) -> SignalGen Ticks (Signal (Maybe ((Screen, World), Maybe Plot)))
+signalNetwork :: World -> SignalGen Bool (Signal [SDL.Event]) -> SignalGen Ticks (Signal (Maybe ((Screen, Either Species World), Maybe Plot)))
 signalNetwork initialWorld eventGen = (clockGen >>=) $ flip embed $ do
 	events <- eventGen
 	dice   <- effectful $ replicateM 10 (randomRIO (1::Int, 20))
-	playerAndWorld <- transfer2 (initialPlayer, initialWorld) updatePlayerAndWorld dice events
-	screen <- transfer initialScreen (const updateScreen) (fmap fst playerAndWorld)
-	plot <- transfer (Just Intro) (const updatePlot) (fmap fst playerAndWorld)
-	return $ composeState <$> events <*> screen <*> fmap snd playerAndWorld <*> plot
+	playerAndWorld <- transfer2 (Right (initialPlayer, initialWorld)) updatePlayerAndWorld dice events
+	screen <- transfer initialScreen (const updateScreen) (fmap (hush . fmap fst) playerAndWorld)
+	plot <- transfer (Just Intro) (const updatePlot) (fmap (hush . fmap fst) playerAndWorld)
+	return $ composeState <$> events <*> screen <*> fmap (fmap snd) playerAndWorld <*> plot
 
 screenCells :: Screen -> [WorldPosition]
 screenCells (Screen {screenPos = WorldPosition (x, y)}) =
@@ -144,8 +148,17 @@ plotText :: Plot -> String
 plotText Intro = "You are the evil mastermind Notlock.  Your plan to kidnap the boy king went off great, up until it was notice he was gone.  Now you are trapped in the forest on the way back to your lair, and must evade the searchers."
 plotText HeroRumour = "You have heard that there is a HERO abount.  Best be careful."
 
-draw :: SDL.Surface -> SDL.TTF.Font -> Screen -> World -> Maybe Plot -> MaybeT IO ()
-draw win plotFont screen world plot = liftIO $ do
+dieText :: Species -> String
+dieText Hero = "The hero has defeated you, but I suppose that was inevitable."
+dieText x = "You have been killed by a " ++ Text.unpack (show x) ++ ".  You can exit now."
+
+draw :: SDL.Surface -> SDL.TTF.Font -> Screen -> Either Species World -> Maybe Plot -> MaybeT IO ()
+draw win plotFont _ (Left species) _ = liftIO $ do
+	black <- mapColour win (SDL.Color 0x00 0x00 0x00)
+	True <- SDL.fillRect win (Just $ SDL.Rect 0 0 800 600) black
+	drawWrap win plotFont (10, 10) $ dieText species
+	SDL.flip win
+draw win plotFont screen (Right world) plot = liftIO $ do
 	roadColour <- mapColour win (SDL.Color 0xcc 0x00 0x00)
 	lampColour <- mapColour win (SDL.Color 0xcc 0xcc 0x00)
 	mapM_ (\cell ->
@@ -163,21 +176,25 @@ draw win plotFont screen world plot = liftIO $ do
 					return ()
 		) (screenCells screen)
 
-	maybe (return ()) (drawPlot (10, 10) . plotText) plot
+	maybe (return ()) (drawWrap win plotFont (10, 10) . plotText) plot
 	rendered <- SDL.TTF.renderUTF8Blended plotFont (Text.unpack $ show $ getL (worldPositionY.lensScreenPos) screen) (SDL.Color 0xff 0xff 0xff)
 	True <- SDL.blitSurface rendered Nothing win (Just $ SDL.Rect 5 550 0 0)
 	SDL.flip win
 	where
 	inLamp pos = let ScreenPosition (x,y) = worldPositionToScreenPosition screen pos in
 		x >= 7 && x <= 17 && y >= 4 && y <= 14
-	drawPlot _ [] = return ()
-	drawPlot (x, y) txt = do
+
+drawWrap :: SDL.Surface -> SDL.TTF.Font -> (Int, Int) -> String -> IO ()
+drawWrap win plotFont = go
+	where
+	go _ [] = return ()
+	go (x, y) txt = do
 		-- TODO: smartwrap?
 		(w, h) <- SDL.TTF.utf8Size plotFont txt
 		let linec = floor (fromIntegral (length txt) / (fromIntegral w / 800::Rational)) - 5
 		rendered <- SDL.TTF.renderUTF8Blended plotFont (take linec txt) (SDL.Color 0xff 0xff 0xff)
 		True <- SDL.blitSurface rendered Nothing win (Just $ SDL.Rect x y 0 0)
-		drawPlot (x, y+h) (drop linec txt)
+		go (x, y+h) (drop linec txt)
 
 mainLoop :: SDL.Surface -> SDL.TTF.Font -> IO ()
 mainLoop win plotFont = void $ runMaybeT $ do
