@@ -65,11 +65,11 @@ moveToward pos@(WorldPosition (x1, y1)) (WorldPosition (x2, y2)) =
 		(y1 < y2, WorldPosition (x1, y1+2))
 	]
 
-colourForSpecies :: Species -> SDL.Color
-colourForSpecies Villan = SDL.Color 0xcc 0xcc 0xcc
-colourForSpecies Hero = SDL.Color 0x00 0x00 0xcc
-colourForSpecies Horseman = SDL.Color 0x00 0xcc 0x00
-colourForSpecies Goat = SDL.Color 0x99 0x99 0x00
+spriteForSpecies :: Species -> Images -> SDL.Surface
+spriteForSpecies Villan = notlock
+spriteForSpecies Hero = undefined
+spriteForSpecies Horseman = horse
+spriteForSpecies Goat = goat
 
 canSee :: Character -> Character -> Bool
 canSee (Character {sight = s, pos = WorldPosition (x1, y1)}) (Character {pos = WorldPosition (x2, y2)}) =
@@ -180,7 +180,7 @@ draw win plotFont _ _ (Left species) _ = liftIO $ do
 	True <- SDL.fillRect win (Just $ SDL.Rect 0 0 800 600) black
 	drawWrap win plotFont (10, 10) $ dieText species
 	SDL.flip win
-draw win plotFont (Images bg road notlock horse) screen (Right world) plot = liftIO $ do
+draw win plotFont images@(Images {bg=bg, road=road}) screen (Right world) plot = liftIO $ do
 	mapM_ (\cell -> do
 			let rect = screenPositionToSDL $ worldPositionToScreenPosition screen cell
 			let x = case cell of
@@ -188,19 +188,11 @@ draw win plotFont (Images bg road notlock horse) screen (Right world) plot = lif
 					_ -> bg
 			True <- SDL.blitSurface x Nothing win rect
 
-			when (inLamp cell) $
-				case Map.lookup cell world of
-					Just (C (Character {species = Villan})) -> do
-						True <- SDL.blitSurface notlock Nothing win rect
-						return ()
-					Just (C (Character {species = Horseman})) -> do
-						True <- SDL.blitSurface horse Nothing win rect
-						return ()
-					Just (C c) | inLamp cell -> do
-						colour <- mapColour win $ colourForSpecies (species c)
-						True <- SDL.fillRect win (screenPositionToSDL $ worldPositionToScreenPosition screen (pos c)) colour
-						return ()
-					_ -> return ()
+			case Map.lookup cell world of
+				Just (C c) | inLamp cell -> do
+					True <- SDL.blitSurface (spriteForSpecies (species c) images) Nothing win rect
+					return ()
+				_ -> return ()
 		) (screenCells screen)
 
 
@@ -249,7 +241,8 @@ main = withExternalLibs $ do
 	road <- SDL.displayFormatAlpha =<< SDL.load "./road.png"
 	notlock <- SDL.displayFormatAlpha =<< SDL.load "./notlock.png"
 	horse <- SDL.displayFormatAlpha =<< SDL.load "./horseman.png"
-	mainLoop win plotFont (Images bg road notlock horse)
+	goat <- SDL.displayFormatAlpha =<< SDL.load "./goat.png"
+	mainLoop win plotFont (Images bg road notlock horse goat)
 
 	-- Need to do this so that SDL.TTF.quit will not segfault
 	finalizeForeignPtr plotFont

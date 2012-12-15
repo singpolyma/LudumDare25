@@ -1,8 +1,8 @@
-module SomeMap where
+module SomeMap (someMap, playerPosToScreenPos, insertCharacterToWorld, initialWorld, initialScreen, initialPlayer) where
 
 import Prelude ()
 import BasicPrelude
-import Types
+import Types hiding (goat)
 import System.Random (randomRIO)
 import qualified Data.Map as Map
 
