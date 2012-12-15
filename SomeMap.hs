@@ -30,13 +30,13 @@ mkWorld :: [Character] -> World
 mkWorld = Map.fromList . map (\c -> (pos c, C c))
 
 someMap :: IO World
-someMap = fmap (mkWorld . (hero:)) (replicateM 5 horsemanIO)
+someMap = fmap (mkWorld . (hero:)) (replicateM 10 horsemanIO)
 
 initialPlayer :: Character
 initialPlayer = Character {
 		species = Villan,
 		sight   = Distance 10,
-		pos     = WorldPosition (5, 0)
+		pos     = WorldPosition (12, 0)
 	}
 
 initialWorld :: IO World
