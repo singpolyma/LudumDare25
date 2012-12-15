@@ -8,7 +8,7 @@ data Done = Quit | Died Species
 
 data ItemKind = Shrub deriving (Eq, Show)
 data Species = Villan | Hero | Horseman | Goat | Guard deriving (Eq, Show)
-data Plot = Intro | HeroRumour | Patrols deriving (Eq, Show)
+data Plot = Intro | HeroRumour | Patrols | HeroNear deriving (Eq, Show)
 
 newtype WorldPosition = WorldPosition (Int, Int) deriving (Eq, Ord, Show)
 newtype ScreenPosition = ScreenPosition (Int, Int) deriving (Eq, Ord, Show)

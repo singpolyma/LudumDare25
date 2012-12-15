@@ -125,6 +125,7 @@ updatePlot :: Maybe Character -> Maybe Plot -> Maybe Plot
 updatePlot (Just (Character {pos = WorldPosition (_,y)})) (Just Intro) | y < 5 = Just Intro
 updatePlot (Just (Character {pos = WorldPosition (_,y)})) _ | y > 5 && y < 10 = Just HeroRumour
 updatePlot (Just (Character {pos = WorldPosition (_,y)})) _ | y > 10 && y < 15 = Just Patrols
+updatePlot (Just (Character {pos = WorldPosition (_,y)})) _ | y > 90 = Just HeroNear
 updatePlot _ _ = Nothing
 
 clockGen :: SignalGen Ticks (Signal Bool)
@@ -159,9 +160,10 @@ signalNetwork musicState initialWorld eventGen = (clockGen >>=) $ flip embed $ d
 	return $ composeState <$> events <*> screen <*> fmap (fmap snd) playerAndWorld <*> plot <*> music
 
 plotText :: Plot -> String
-plotText Intro = "You are the evil mastermind Notlock.  Your plan to kidnap the boy king went off great, up until it was noticed that he was gone.  Now you are trapped in the forest on the way back to your lair, and must evade the searchers."
+plotText Intro = "You are the evil mastermind Notlock.  Your plan to kidnap the boy king went off great, up until it was noticed that he was gone.  Now you are trapped in the forest on the way back to your northern lair, and must evade the searchers."
 plotText HeroRumour = "You have heard that there is a HERO abount.  Best be careful."
 plotText Patrols = "Goatback subjects are searching back and forth, but cannot see very far.  Horsemen search only the road, but can see much further."
+plotText HeroNear = "Be on your guard.  If the HERO finds you, that's the end."
 
 dieText :: Species -> String
 dieText Hero = "The hero has defeated you, but I suppose that was inevitable.  Press any key to try again."
