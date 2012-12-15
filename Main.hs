@@ -185,7 +185,8 @@ dieText x = "You have been killed by a " ++ Text.unpack (show x) ++ ".  Press an
 
 canSeeBox :: Maybe SDL.Rect -> Distance -> SDL.Rect
 canSeeBox (Just (SDL.Rect x y _ _)) (Distance s) =
-	SDL.Rect (x - (s*32)) (y - (s*32)) (s*32*2) (s*32*2)
+	SDL.Rect (x - (s*32)) (y - (s*32)) (s*32*2 + 32) (s*32*2 + 32)
+canSeeBox _ _ = error "Impossible canSeeBox"
 
 draw :: (MonadIO m) => SDL.Surface -> SDL.TTF.Font -> Images -> Screen -> World -> Maybe Plot -> m ()
 draw win plotFont images@(Images {bg=bg, road=road}) screen world plot = liftIO $ do
@@ -222,7 +223,6 @@ drawWrap win plotFont = go
 	where
 	go _ [] = return ()
 	go (x, y) txt = do
-		-- TODO: smartwrap?
 		(w, h) <- SDL.TTF.utf8Size plotFont txt
 		let linec = floor (fromIntegral (length txt) / (fromIntegral w / 800::Rational))
 		let smartWrappedLine = smartWrap linec txt
