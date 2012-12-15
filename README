@@ -7,9 +7,15 @@ You will need ghc and cabal-install to build this from source.  On Debian you ca
 
 	sudo apt-get install ghc cabal-install
 
-On windows you can get them by installing the Haskell Platform from <http://haskell.org>.  Then run the following command:
+On windows you can get them by installing the Haskell Platform from <http://haskell.org>.
 
-	cabal install containers errors elerea elerea-sdl SDL SDL-image SDL-ttf data-lens basic-prelude random utility-ht text
+You will also need SDL and related libraries.  On Debian you can get these with:
+
+	sudo apt-get install libsdl1.2-dev libsdl-image1.2-dev libsdl-mixer1.2-dev libsdl-gfx1.2-dev libsdl-ttf2.0-dev
+
+Then run the following command:
+
+	cabal install containers errors elerea elerea-sdl SDL SDL-image SDL-ttf SDL-mixer data-lens basic-prelude random utility-ht text
 
 and then finally the normal:
 

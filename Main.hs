@@ -6,7 +6,7 @@ import Types
 import SomeMap
 import Derive
 import Data.IORef
-import Foreign (finalizeForeignPtr)
+import Foreign (finalizeForeignPtr, touchForeignPtr)
 import System.Random
 import Control.Error
 import Data.Bool.HT
@@ -19,6 +19,7 @@ import SDLgfx
 import qualified Graphics.UI.SDL as SDL
 import qualified Graphics.UI.SDL.Image as SDL
 import qualified Graphics.UI.SDL.TTF as SDL.TTF
+import qualified Graphics.UI.SDL.Mixer as SDL.Mixer
 
 import qualified Data.Map as Map
 import qualified Data.Text as Text
@@ -227,9 +228,11 @@ mainLoop win plotFont images = void $ runMaybeT $ do
 withExternalLibs :: IO () -> IO ()
 withExternalLibs f = SDL.withInit [SDL.InitEverything] $ do
 	True <- SDL.TTF.init
+	SDL.Mixer.openAudio SDL.Mixer.defaultFrequency SDL.Mixer.AudioS16Sys 0 1024
 
 	f
 
+	SDL.Mixer.closeAudio
 	SDL.TTF.quit
 	SDL.quit
 
@@ -243,7 +246,10 @@ main = withExternalLibs $ do
 	horse <- SDL.displayFormatAlpha =<< SDL.load "./horseman.png"
 	goat <- SDL.displayFormatAlpha =<< SDL.load "./goat.png"
 	hero <- SDL.displayFormatAlpha =<< SDL.load "./hero.png"
+	riff <- SDL.Mixer.loadMUS "./riff.ogg"
+	SDL.Mixer.playMusic riff (-1)
 	mainLoop win plotFont (Images bg road notlock horse goat hero)
 
 	-- Need to do this so that SDL.TTF.quit will not segfault
 	finalizeForeignPtr plotFont
+	touchForeignPtr riff

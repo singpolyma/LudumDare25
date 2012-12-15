@@ -38,6 +38,7 @@ executable LudumDare25
                 SDL,
                 SDL-image,
                 SDL-ttf,
+                SDL-mixer,
                 data-lens,
                 basic-prelude,
                 random,
