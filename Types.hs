@@ -6,6 +6,7 @@ import qualified Graphics.UI.SDL as SDL
 
 data Done = Quit | Died Species
 
+data ItemKind = Shrub deriving (Eq, Show)
 data Species = Villan | Hero | Horseman | Goat | Guard deriving (Eq, Show)
 data Plot = Intro | HeroRumour | Patrols deriving (Eq, Show)
 
@@ -13,17 +14,22 @@ newtype WorldPosition = WorldPosition (Int, Int) deriving (Eq, Ord, Show)
 newtype ScreenPosition = ScreenPosition (Int, Int) deriving (Eq, Ord, Show)
 newtype Distance = Distance Int deriving (Eq, Ord, Show) -- In cells
 
-data CellItem = C !Character deriving (Eq, Show)
+data CellItem = C !Character | I !Item deriving (Eq, Show)
 
 fromCharacterCell :: CellItem -> Maybe Character
 fromCharacterCell (C x) = Just x
---fromCharacterCell _ = Nothing
+fromCharacterCell _ = Nothing
 
 type World = Map WorldPosition CellItem
 
 -- 25x18 cells
 data Screen = Screen {
 		screenPos :: WorldPosition -- For bottom-left cell
+	} deriving (Eq, Show)
+
+data Item = Item {
+		itemKind :: ItemKind,
+		itemPos :: WorldPosition
 	} deriving (Eq, Show)
 
 data Character = Character {
@@ -38,7 +44,8 @@ data Images = Images {
 		notlock :: SDL.Surface,
 		horse :: SDL.Surface,
 		goat :: SDL.Surface,
-		hero :: SDL.Surface
+		hero :: SDL.Surface,
+		shrub :: SDL.Surface
 	} deriving (Eq, Show)
 
 worldPositionX :: Lens WorldPosition Int

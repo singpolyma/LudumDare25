@@ -5,7 +5,7 @@ import BasicPrelude hiding (guard)
 import System.Random (randomRIO)
 import qualified Data.Map as Map
 
-import Types hiding (goat, hero)
+import Types hiding (goat, hero, shrub)
 import Util
 
 hero :: Character
@@ -62,6 +62,21 @@ guards = concatMap (\x -> [
 		guard (WorldPosition (50, y))
 	]) [-20..120]
 
+shrub :: WorldPosition -> Item
+shrub p = Item {
+		itemKind = Shrub,
+		itemPos  = p
+	}
+
+shrubIO :: IO Item
+shrubIO = do
+	x <- randomRIO (-50, 50)
+	y <- randomRIO (-10,120)
+	return $ shrub $ WorldPosition (x, y)
+
+shrubMap :: IO World
+shrubMap = Map.fromList . map (itemPos &&& I) <$> replicateM 300 shrubIO
+
 someMap :: IO World
 someMap = (mkWorld . ((hero:guards) ++)) <$> ((++) <$> replicateM 10 horsemanIO <*> replicateM 40 goatIO)
 
@@ -73,4 +88,4 @@ initialPlayer = Character {
 	}
 
 initialWorld :: IO World
-initialWorld = insertCharacterToWorld initialPlayer <$> someMap
+initialWorld = (++) <$> (insertCharacterToWorld initialPlayer <$> someMap) <*> shrubMap

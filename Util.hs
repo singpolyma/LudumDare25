@@ -14,6 +14,9 @@ playerPosToScreenPos (Character {pos = WorldPosition (x, y)}) = WorldPosition (x
 insertCharacterToWorld :: Character -> World -> World
 insertCharacterToWorld c = Map.insert (pos c) (C c)
 
+insertItemToWorld :: Item -> World -> World
+insertItemToWorld c = Map.insert (itemPos c) (I c)
+
 colourForSpecies :: Species -> SDL.Color
 colourForSpecies Villan = SDL.Color 0xcc 0xcc 0xcc
 colourForSpecies Hero = SDL.Color 0x00 0x00 0xcc
@@ -27,6 +30,9 @@ spriteForSpecies Horseman = horse
 spriteForSpecies Goat = goat
 spriteForSpecies Guard = goat
 spriteForSpecies Hero = hero
+
+spriteForItem :: ItemKind -> Images -> SDL.Surface
+spriteForItem Shrub = shrub
 
 isKeyUp :: SDL.Event -> Bool
 isKeyUp (SDL.KeyUp {}) = True

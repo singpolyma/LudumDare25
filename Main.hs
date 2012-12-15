@@ -191,6 +191,9 @@ draw win plotFont images@(Images {bg=bg, road=road}) screen world plot music = l
 					True <- boxAlpha win (canSeeBox rect (sight c)) (colourForSpecies $ species c) 0x33
 					True <- SDL.blitSurface (spriteForSpecies (species c) images) Nothing win rect
 					return ()
+				Just (I i) | inLamp cell -> do
+					True <- SDL.blitSurface (spriteForItem (itemKind i) images) Nothing win rect
+					return ()
 				_ -> return ()
 		) (screenCells screen)
 
@@ -248,9 +251,10 @@ main = withExternalLibs $ do
 	horse <- SDL.displayFormatAlpha =<< SDL.load "./horseman.png"
 	goat <- SDL.displayFormatAlpha =<< SDL.load "./goat.png"
 	hero <- SDL.displayFormatAlpha =<< SDL.load "./hero.png"
+	shrub <- SDL.displayFormatAlpha =<< SDL.load "./shrub.png"
 	riff <- SDL.Mixer.loadMUS "./riff.ogg"
 	SDL.Mixer.playMusic riff (-1)
-	mainLoop win plotFont (Images bg road notlock horse goat hero) True
+	mainLoop win plotFont (Images bg road notlock horse goat hero shrub) True
 
 	-- Need to do this so that SDL.TTF.quit will not segfault
 	finalizeForeignPtr plotFont
